@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026-2030 五年日記 | Hiyori Diary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+        :root {
+            --bg: #f8f6f2;
+            --primary: #8c7662;
+            --secondary: #d2b48c;
+            --paper: #fffcf9;
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg);
+            color: #4a443f;
+            margin: 0;
+            user-select: none;
+        }
+        .serif { font-family: 'Noto Serif TC', serif; }
+        
+        .cal-day {
+            aspect-ratio: 1/1;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .cal-day.today { border: 2px solid var(--secondary); }
+        .cal-day img {
+            position: absolute;
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+        .cal-day .num { position: absolute; top: 3px; left: 5px; font-size: 10px; z-index: 10; font-weight: bold; text-shadow: 0 0 4px rgba(255,255,255,0.8); }
+        .cal-day .emo { position: absolute; bottom: 3px; right: 3px; font-size: 14px; z-index: 10; }
+
+        .year-entry { border-bottom: 1px solid #f0ece6; padding: 16px 0; }
+        .year-label { font-size: 11px; color: var(--secondary); font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+        .tag-btn { border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; font-size: 13px; background: white; transition: 0.2s; }
+        .tag-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="pb-24">
+
+<div id="app" class="max-w-md mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-end mb-8">
+        <div>
+            <h1 id="month-title" class="serif text-3xl font-bold text-stone-700">MARCH</h1>
+            <p class="text-xs tracking-widest text-stone-400 mt-1">2026-2030 DIARY</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="changeMonth(-1)" class="p-2 text-stone-300"><i data-lucide="chevron-left"></i></button>
+            <button onclick="changeMonth(1)" class="p-2 text-stone-300"><i data-lucide="chevron-right"></i></button>
+        </div>
+    </header>
+
+    <!-- 頁面：月曆回顧 -->
+    <div id="view-calendar" class="view">
+        <div class="grid grid-cols-7 gap-1 text-[10px] text-center font-bold text-stone-300 mb-3">
+            <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+        </div>
+        <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+
+        <div class="mt-10 bg-white/40 p-6 rounded-3xl border border-stone-200">
+            <h3 class="text-xs font-bold mb-5 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-stone-400"></i> 本月習慣達成</h3>
+            <div id="habit-snapshot" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- 頁面：日記編輯 -->
+    <div id="view-editor" class="view hidden">
+        <div class="flex items-center gap-4 mb-6">
+            <button onclick="showPage('calendar')" class="p-1"><i data-lucide="arrow-left"></i></button>
+            <h2 id="edit-date-label" class="serif text-2xl font-bold">4月4日</h2>
+            <div class="flex gap-3 ml-auto" id="weather-selector">
+                <button onclick="setWeather('☀️')" class="weather-btn opacity-20 text-xl" data-val="☀️">☀️</button>
+                <button onclick="setWeather('☁️')" class="weather-btn opacity-20 text-xl" data-val="☁️">☁️</button>
+                <button onclick="setWeather('🌧️')" class="weather-btn opacity-20 text-xl" data-val="🌧️">🌧️</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-8">
+            <div id="photo-container" class="w-full aspect-[4/3] bg-stone-50 rounded-2xl mb-6 overflow-hidden flex items-center justify-center relative border border-dashed border-stone-200" onclick="document.getElementById('file-input').click()">
+                <div id="photo-placeholder" class="text-stone-300 text-center">
+                    <i data-lucide="camera" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p class="text-xs">記錄今天的影像</p>
+                </div>
+                <img id="edit-photo-img" class="hidden w-full h-full object-cover">
+                <button id="del-photo" onclick="removePhoto(event)" class="hidden absolute top-3 right-3 bg-black/40 text-white p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="previewPhoto(event)">
+
+            <div class="flex justify-between mb-8 px-2">
+                <button onclick="setMood('🥰')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="🥰">🥰</button>
+                <button onclick="setMood('😊')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😊">😊</button>
+                <button onclick="setMood('😌')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😌">😌</button>
+                <button onclick="setMood('😩')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😩">😩</button>
+                <button onclick="setMood('🤕')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="🤕">🤕</button>
+            </div>
+
+            <div class="space-y-2 mb-8">
+                <div class="year-entry">
+                    <div class="year-label"><span>第一年</span><span id="label-year-num">2026</span></div>
+                    <textarea id="entry-text" rows="3" class="w-full border-none p-0 text-base focus:ring-0 resize-none bg-transparent" placeholder="點擊開始撰寫..."></textarea>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <details class="group">
+                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
+                        <span>感恩日記</span>
+                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
+                    </summary>
+                    <div class="pb-4">
+                        <input type="text" id="input-gratitude" class="w-full text-sm bg-stone-50 border-none rounded-xl p-4" placeholder="今天值得感謝的小事">
+                    </div>
+                </details>
+
+                <details class="group">
+                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
+                        <span>習慣打卡</span>
+                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
+                    </summary>
+                    <div class="pb-4 space-y-3" id="habit-editor-list"></div>
+                </details>
+
+                <details class="group">
+                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
+                        <span>健康狀況</span>
+                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
+                    </summary>
+                    <div class="pb-4">
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button onclick="toggleHealth('頭痛')" class="health-tag tag-btn" data-val="頭痛">頭痛</button>
+                            <button onclick="toggleHealth('經痛')" class="health-tag tag-btn" data-val="經痛">經痛</button>
+                            <button onclick="toggleHealth('過敏')" class="health-tag tag-btn" data-val="過敏">過敏</button>
+                        </div>
+                        <input type="text" id="health-note" class="w-full text-sm bg-stone-50 border-none rounded-xl p-4" placeholder="補充細節">
+                    </div>
+                </details>
+            </div>
+
+            <button onclick="saveCurrentData()" class="w-full py-5 bg-[#8c7662] text-white rounded-2xl mt-8 font-bold shadow-lg shadow-stone-100 active:scale-95 transition-transform">
+                儲存回憶
+            </button>
+        </div>
+        
+        <div id="past-years-history" class="mt-10 space-y-4 pb-10"></div>
+    </div>
+
+    <!-- 頁面：設定 -->
+    <div id="view-settings" class="view hidden">
+        <div class="bg-white rounded-[2rem] p-8 border border-stone-100 shadow-sm">
+            <h3 class="serif text-2xl font-bold mb-8">帳號與偏好</h3>
+            
+            <div class="mb-10">
+                <label class="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-3">您的唯一識別碼</label>
+                <div class="bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-mono font-bold text-stone-600 select-all" id="sync-id-display"></div>
+            </div>
+
+            <!-- 習慣管理 -->
+            <div class="mb-10 pt-8 border-t border-stone-50">
+                <label class="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-4">預設習慣清單</label>
+                <div id="global-habit-manager" class="space-y-2 mb-4"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-habit-input" class="flex-1 bg-stone-50 border-none rounded-xl px-4 text-sm" placeholder="新增習慣...">
+                    <button onclick="addGlobalHabit()" class="bg-stone-800 text-white px-4 py-2 rounded-xl text-xs font-bold">新增</button>
+                </div>
+                <p class="text-[10px] text-stone-400 mt-4 leading-relaxed italic">修改此清單將影響未來新日記的預設項目，不會更動到過去已儲存的紀錄。</p>
+            </div>
+
+            <div class="space-y-4 pt-8 border-t border-stone-50">
+                <h4 class="text-xs font-bold text-stone-500 uppercase tracking-widest">資料匯出</h4>
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="exportViewPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
+                        <span class="flex items-center gap-3"><i data-lucide="grid" class="w-4 h-4 text-stone-400"></i> 月回顧總覽</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
+                    </button>
+                    <button onclick="exportHistoryPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
+                        <span class="flex items-center gap-3"><i data-lucide="book" class="w-4 h-4 text-stone-400"></i> 五年日記內容</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
+                    </button>
+                    <button onclick="exportHabitPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
+                        <span class="flex items-center gap-3"><i data-lucide="check-circle" class="w-4 h-4 text-stone-400"></i> 習慣統計表</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
+                    </button>
+                    <button onclick="exportMedicalPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6 text-red-400/80">
+                        <span class="flex items-center gap-3"><i data-lucide="heart-pulse" class="w-4 h-4"></i> 健康紀錄匯出</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4 pt-10 mt-10 border-t border-stone-50">
+                <button onclick="downloadJSONBackup()" class="w-full py-4 bg-stone-800 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> 備份完整存檔
+                </button>
+                <div class="flex gap-3">
+                    <input type="file" id="import-json" class="hidden" accept=".json" onchange="importJSONBackup(event)">
+                    <button onclick="document.getElementById('import-json').click()" class="flex-1 py-4 bg-stone-100 text-stone-600 rounded-2xl text-sm font-bold">匯入舊檔</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md h-20 border-t border-stone-100 flex justify-around items-center px-8 pb-3">
+        <button onclick="showPage('calendar')" id="nav-calendar" class="flex flex-col items-center gap-1.5 text-[#8c7662]">
+            <i data-lucide="layout-grid" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">回顧</span>
+        </button>
+        <button onclick="showPage('settings')" id="nav-settings" class="flex flex-col items-center gap-1.5 text-stone-300">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">設定</span>
+        </button>
+    </nav>
+</div>
+
+<div id="export-container" class="hidden bg-white p-12 text-stone-800"></div>
+
+<script>
+    const STORAGE_KEY = 'hiyori_diary_final_v1';
+    let db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"diaries":{}, "habits":["運動", "多喝水", "早起"]}');
+    let viewDate = new Date();
+    let activeDate = "", currentMood = "", currentWeather = "", currentPhoto = "", activeHealth = [];
+    const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+
+    window.onload = () => { lucide.createIcons(); initID(); renderCalendar(); };
+
+    function initID() {
+        let id = localStorage.getItem('hiyori_user_id');
+        if(!id) {
+            id = 'HY-' + Math.random().toString(36).substr(2, 4).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+            localStorage.setItem('hiyori_user_id', id);
+        }
+        document.getElementById('sync-id-display').innerText = id;
+    }
+
+    function renderCalendar() {
+        const y = viewDate.getFullYear(), m = viewDate.getMonth();
+        document.getElementById('month-title').innerText = monthNames[m];
+        const firstDay = new Date(y, m, 1).getDay(), daysInMonth = new Date(y, m + 1, 0).getDate();
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = "";
+        for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+        for(let d=1; d<=daysInMonth; d++) {
+            const dateStr = `${y}-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+            const data = db.diaries[dateStr];
+            grid.innerHTML += `
+                <div class="cal-day ${dateStr === new Date().toISOString().split('T')[0] ? 'today' : ''}" onclick="openEditor('${dateStr}')">
+                    <span class="num">${d}</span>
+                    ${data?.photo ? `<img src="${data.photo}">` : ''}
+                    ${data?.mood ? `<span class="emo">${data.mood}</span>` : ''}
+                </div>`;
+        }
+        renderHabitSnapshot();
+    }
+
+    function openEditor(dateStr) {
+        activeDate = dateStr;
+        const [y, m, d] = dateStr.split('-');
+        document.getElementById('edit-date-label').innerText = `${parseInt(m)}月${parseInt(d)}日`;
+        document.getElementById('label-year-num').innerText = y;
+        const data = db.diaries[dateStr] || {};
+        document.getElementById('entry-text').value = data.text || "";
+        document.getElementById('input-gratitude').value = data.gratitude || "";
+        document.getElementById('health-note').value = data.healthNote || "";
+        currentPhoto = data.photo || ""; currentMood = data.mood || ""; currentWeather = data.weather || ""; activeHealth = data.health || [];
+        
+        // 關鍵：如果這天沒有舊的習慣紀錄，就載入目前的預設清單
+        if(!data.habitConfig) data.habitConfig = [...db.habits];
+        if(!data.habitLogs) data.habitLogs = [];
+        
+        updateUI();
+        renderHabitEditor(data);
+        renderHistory(dateStr);
+        showPage('editor');
+    }
+
+    function renderHabitEditor(data) {
+        const container = document.getElementById('habit-editor-list');
+        container.innerHTML = data.habitConfig.map(h => `
+            <div class="flex justify-between items-center bg-stone-50 p-4 rounded-2xl">
+                <span class="text-sm font-medium">${h}</span>
+                <button onclick="toggleHabit('${h}')" class="w-7 h-7 rounded-full border-2 border-stone-200 flex items-center justify-center ${data.habitLogs.includes(h)?'bg-stone-800 border-stone-800 text-white':''}">${data.habitLogs.includes(h)?'<i data-lucide="check" class="w-4 h-4"></i>':''}</button>
+            </div>`).join('');
+        lucide.createIcons();
+    }
+
+    function toggleHabit(h) {
+        const d = db.diaries[activeDate];
+        const i = d.habitLogs.indexOf(h); if(i > -1) d.habitLogs.splice(i,1); else d.habitLogs.push(h);
+        renderHabitEditor(d);
+    }
+
+    function updateUI() {
+        if(currentPhoto) {
+            document.getElementById('edit-photo-img').src = currentPhoto;
+            document.getElementById('edit-photo-img').classList.remove('hidden');
+            document.getElementById('photo-placeholder').classList.add('hidden');
+            document.getElementById('del-photo').classList.remove('hidden');
+        } else {
+            document.getElementById('edit-photo-img').classList.add('hidden');
+            document.getElementById('photo-placeholder').classList.remove('hidden');
+            document.getElementById('del-photo').classList.add('hidden');
+        }
+        document.querySelectorAll('.mood-btn').forEach(b => {
+            b.style.filter = (b.dataset.val === currentMood) ? 'grayscale(0)' : 'grayscale(1)';
+            b.style.opacity = (b.dataset.val === currentMood) ? '1' : '0.2';
+            b.style.transform = (b.dataset.val === currentMood) ? 'scale(1.2)' : 'scale(1)';
+        });
+        document.querySelectorAll('.weather-btn').forEach(b => b.style.opacity = (b.dataset.val === currentWeather) ? '1' : '0.2');
+        document.querySelectorAll('.health-tag').forEach(t => t.classList.toggle('active', activeHealth.includes(t.dataset.val)));
+    }
+
+    function saveCurrentData() {
+        const existing = db.diaries[activeDate] || {};
+        db.diaries[activeDate] = { 
+            ...existing, 
+            text: document.getElementById('entry-text').value, 
+            mood: currentMood, 
+            weather: currentWeather, 
+            photo: currentPhoto, 
+            gratitude: document.getElementById('input-gratitude').value, 
+            health: activeHealth, 
+            healthNote: document.getElementById('health-note').value 
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        showPage('calendar');
+    }
+
+    // --- 全域習慣管理 ---
+    function renderGlobalHabits() {
+        const container = document.getElementById('global-habit-manager');
+        container.innerHTML = db.habits.map((h, idx) => `
+            <div class="flex justify-between items-center bg-white border border-stone-100 p-3 rounded-xl shadow-sm">
+                <span class="text-sm">${h}</span>
+                <button onclick="removeGlobalHabit(${idx})" class="text-stone-300 hover:text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    function addGlobalHabit() {
+        const val = document.getElementById('new-habit-input').value.trim();
+        if(val && !db.habits.includes(val)) {
+            db.habits.push(val);
+            document.getElementById('new-habit-input').value = "";
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            renderGlobalHabits();
+        }
+    }
+
+    function removeGlobalHabit(idx) {
+        db.habits.splice(idx, 1);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        renderGlobalHabits();
+    }
+
+    function renderHabitSnapshot() {
+        const container = document.getElementById('habit-snapshot');
+        const curM = (viewDate.getMonth()+1).toString().padStart(2,'0');
+        // 快照只顯示目前清單中的習慣在當月的達成狀況
+        container.innerHTML = db.habits.map(h => {
+            let count = 0; Object.keys(db.diaries).forEach(d => { if(d.includes(`-${curM}-`) && db.diaries[d].habitLogs?.includes(h)) count++; });
+            return `<div><div class="flex justify-between text-[10px] mb-2 font-bold text-stone-500 uppercase"><span>${h}</span><span>${count} DAYS</span></div><div class="w-full h-1 bg-stone-100 rounded-full"><div class="h-full bg-stone-400 rounded-full" style="width: ${Math.min(100,(count/30)*100)}%"></div></div></div>`;
+        }).join('');
+    }
+
+    function renderHistory(dateStr) {
+        const md = dateStr.substring(5), thisY = dateStr.split('-')[0], container = document.getElementById('past-years-history');
+        container.innerHTML = `<h3 class="text-xs font-bold text-stone-400 mb-6 uppercase tracking-widest px-2">歷年的今天</h3>`;
+        let found = false;
+        Object.keys(db.diaries).sort().reverse().forEach(key => {
+            if(key.endsWith(md) && key.split('-')[0] !== thisY) {
+                found = true; const item = db.diaries[key];
+                container.innerHTML += `<div class="bg-white p-5 rounded-[1.5rem] flex gap-5 border border-stone-100 shadow-sm"><div class="text-center min-w-[45px]"><div class="text-[10px] text-stone-300 font-bold">${key.split('-')[0]}</div><div class="text-2xl mt-1">${item.mood || '📖'}</div></div><div class="flex-1"><p class="text-sm text-stone-500 leading-relaxed">${item.text || ''}</p></div>${item.photo ? `<img src="${item.photo}" class="w-16 h-16 rounded-xl object-cover">` : ''}</div>`;
+            }
+        });
+        if(!found) container.innerHTML += `<p class="text-xs text-stone-300 text-center py-10 italic">尚未有往年的回憶</p>`;
+    }
+
+    function showPage(p) {
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        document.getElementById(`view-${p}`).classList.remove('hidden');
+        document.querySelectorAll('nav button').forEach(b => b.className = 'flex flex-col items-center gap-1.5 text-stone-300');
+        document.getElementById(`nav-${p==='settings'?'settings':'calendar'}`).className = 'flex flex-col items-center gap-1.5 text-[#8c7662]';
+        if(p==='calendar') renderCalendar();
+        if(p==='settings') renderGlobalHabits();
+        lucide.createIcons();
+    }
+
+    function previewPhoto(e) {
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => { currentPhoto = event.target.result; updateUI(); };
+        reader.readAsDataURL(file);
+    }
+    function removePhoto(e) { e.stopPropagation(); currentPhoto = ""; updateUI(); }
+    function changeMonth(dir) { viewDate.setMonth(viewDate.getMonth()+dir); renderCalendar(); }
+    function setWeather(w) { currentWeather = w; updateUI(); }
+    function setMood(m) { currentMood = m; updateUI(); }
+    function toggleHealth(h) { const i = activeHealth.indexOf(h); if(i>-1) activeHealth.splice(i,1); else activeHealth.push(h); updateUI(); }
+    function downloadJSONBackup() { const blob = new Blob([JSON.stringify(db)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Hiyori_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
+    function importJSONBackup(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (event) => { db = JSON.parse(event.target.result); localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); alert("匯入成功！"); renderCalendar(); }; reader.readAsText(file); }
+    function exportToPDF(el, name) { html2pdf().set({ margin: 1, filename: name, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4' } }).from(el).save(); }
+    function exportViewPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">${viewDate.getFullYear()}年 ${viewDate.getMonth()+1}月 回顧</h1><div class="grid grid-cols-7 gap-3">${document.getElementById('calendar-grid').innerHTML}</div>`; exportToPDF(c, 'Monthly.pdf'); }
+    function exportHistoryPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">五年日記內容</h1>` + Object.keys(db.diaries).sort().map(d => `<div style="border-bottom: 1px solid #eee; padding: 25px 0;"><h3 class="serif">${d} ${db.diaries[d].mood}</h3><p>${db.diaries[d].text}</p></div>`).join(''); exportToPDF(c, 'History.pdf'); }
+    function exportHabitPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">習慣打卡統計</h1>` + document.getElementById('habit-snapshot').parentElement.innerHTML; exportToPDF(c, 'Habits.pdf'); }
+    function exportMedicalPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">健康筆記</h1>` + Object.keys(db.diaries).sort().map(d => db.diaries[d].healthNote || db.diaries[d].health?.length ? `<div style="padding: 15px; background: #f9f9f9; margin-bottom: 10px;"><h4>${d}</h4><p>${db.diaries[d].health?.join(', ')}</p><p>${db.diaries[d].healthNote}</p></div>` : '').join(''); exportToPDF(c, 'Medical.pdf'); }
+</script>
+
+</body>
+</html>
+

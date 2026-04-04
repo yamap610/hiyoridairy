@@ -1,427 +1,1874 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026-2030 五年日記 | Hiyori Diary</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
-        :root {
-            --bg: #f8f6f2;
-            --primary: #8c7662;
-            --secondary: #d2b48c;
-            --paper: #fffcf9;
-        }
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: var(--bg);
-            color: #4a443f;
-            margin: 0;
-            user-select: none;
-        }
-        .serif { font-family: 'Noto Serif TC', serif; }
-        
-        .cal-day {
-            aspect-ratio: 1/1;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        .cal-day.today { border: 2px solid var(--secondary); }
-        .cal-day img {
-            position: absolute;
-            width: 100%; height: 100%;
-            object-fit: cover;
-        }
-        .cal-day .num { position: absolute; top: 3px; left: 5px; font-size: 10px; z-index: 10; font-weight: bold; text-shadow: 0 0 4px rgba(255,255,255,0.8); }
-        .cal-day .emo { position: absolute; bottom: 3px; right: 3px; font-size: 14px; z-index: 10; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>五年日記 2026–2030</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 
-        .year-entry { border-bottom: 1px solid #f0ece6; padding: 16px 0; }
-        .year-label { font-size: 11px; color: var(--secondary); font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; }
+<!-- Firebase compat SDK -->
 
-        .tag-btn { border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; font-size: 13px; background: white; transition: 0.2s; }
-        .tag-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 
-        ::-webkit-scrollbar { display: none; }
-    </style>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- jsPDF for PDF export -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ============================================================
+   CSS Variables & Reset
+   ============================================================ */
+:root {
+  --cream:      #F5EFE6;
+  --parchment:  #EDE3D3;
+  --warm-tan:   #D4BC9E;
+  --latte:      #B89B7A;
+  --espresso:   #7A5C40;
+  --dark-brown: #3D2B1A;
+  --dusty-rose: #C9A99A;
+  --sage:       #9AAF9A;
+  --mist:       #8EA4B0;
+  --gold:       #C4A35A;
+  --text-main:  #3D2B1A;
+  --text-sub:   #7A5C40;
+  --text-light: #A08060;
+  --border:     rgba(122,92,64,0.18);
+  --shadow:     0 4px 24px rgba(61,43,26,0.10);
+  --radius:     16px;
+  --font-serif: 'DM Serif Display', 'Noto Serif TC', serif;
+  --font-body:  'Noto Serif TC', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  background: var(--cream);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Grain texture overlay
+   ============================================================ */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+
+/* ============================================================
+   Views (pages)
+   ============================================================ */
+.view { display: none; flex-direction: column; min-height: 100dvh; }
+.view.active { display: flex; }
+
+/* ============================================================
+   LOADING SCREEN
+   ============================================================ */
+#view-loading {
+  align-items: center; justify-content: center;
+  background: var(--parchment);
+}
+.loading-title {
+  font-family: var(--font-serif);
+  font-size: 2rem; color: var(--espresso);
+  text-align: center; letter-spacing: .12em;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.loading-sub { margin-top: .5rem; color: var(--latte); font-size: .85rem; text-align: center; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+/* ============================================================
+   SYNC ID SETUP SCREEN
+   ============================================================ */
+#view-setup {
+  align-items: center; justify-content: center;
+  padding: 2rem; background: var(--parchment);
+}
+.setup-card {
+  background: var(--cream); border-radius: 24px;
+  padding: 2.5rem 2rem; width: 100%; max-width: 380px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.setup-logo {
+  font-family: var(--font-serif);
+  font-size: 1.6rem; color: var(--espresso);
+  text-align: center; margin-bottom: .25rem; letter-spacing:.1em;
+}
+.setup-years { text-align: center; font-size: .78rem; color: var(--latte); letter-spacing:.2em; margin-bottom: 2rem; }
+.setup-label { font-size: .8rem; color: var(--text-sub); margin-bottom: .5rem; display: block; }
+.setup-input {
+  width: 100%; padding: .75rem 1rem;
+  border: 1.5px solid var(--warm-tan); border-radius: 10px;
+  background: var(--parchment); color: var(--text-main);
+  font-family: var(--font-body); font-size: .95rem;
+  outline: none; transition: border-color .2s;
+}
+.setup-input:focus { border-color: var(--espresso); }
+.setup-hint { font-size: .72rem; color: var(--text-light); margin-top: .4rem; margin-bottom: 1.2rem; }
+.btn-primary {
+  width: 100%; padding: .85rem; border: none; border-radius: 12px;
+  background: var(--espresso); color: var(--cream);
+  font-family: var(--font-body); font-size: .9rem;
+  cursor: pointer; transition: background .2s, transform .1s;
+  letter-spacing: .08em;
+}
+.btn-primary:active { transform: scale(.98); background: var(--dark-brown); }
+.setup-divider { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; }
+.setup-divider::before, .setup-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.setup-divider span { font-size: .72rem; color: var(--text-light); }
+.btn-secondary {
+  width: 100%; padding: .75rem; border: 1.5px solid var(--warm-tan);
+  border-radius: 12px; background: transparent;
+  color: var(--text-sub); font-family: var(--font-body); font-size: .85rem;
+  cursor: pointer; transition: all .2s;
+}
+.btn-secondary:hover { background: var(--parchment); }
+
+/* ============================================================
+   TOP BAR (shared)
+   ============================================================ */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 1.2rem .8rem;
+  background: var(--cream);
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+.topbar-title {
+  font-family: var(--font-serif);
+  font-size: 1.15rem; color: var(--espresso);
+  letter-spacing: .08em;
+}
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: none; background: var(--parchment);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; transition: background .2s, transform .1s;
+  color: var(--espresso);
+}
+.icon-btn:active { transform: scale(.92); }
+
+/* ============================================================
+   HOME VIEW – Monthly Calendar
+   ============================================================ */
+#view-home { background: var(--cream); }
+.home-header {
+  padding: 0 1.2rem 1rem;
+}
+.month-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .5rem;
+}
+.month-nav-arrow {
+  background: none; border: none; font-size: 1.3rem;
+  color: var(--latte); cursor: pointer; padding: .3rem .6rem;
+  border-radius: 8px; transition: background .2s;
+}
+.month-nav-arrow:active { background: var(--parchment); }
+.month-label {
+  font-family: var(--font-serif);
+  font-size: 1.05rem; color: var(--text-main); letter-spacing: .1em;
+}
+
+/* Calendar grid */
+.cal-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  text-align: center; margin-bottom: .4rem;
+}
+.cal-weekday {
+  font-size: .65rem; color: var(--text-light); padding: .2rem 0; letter-spacing: .06em;
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 3px; padding: 0 1.2rem;
+}
+.cal-day {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  background: var(--parchment);
+  cursor: pointer;
+  transition: transform .15s;
+  border: 1.5px solid transparent;
+}
+.cal-day:active { transform: scale(.94); }
+.cal-day.today { border-color: var(--espresso); }
+.cal-day.empty { background: transparent; cursor: default; }
+.cal-day.other-month { opacity: .35; }
+.cal-day-num {
+  position: absolute; top: 3px; left: 5px;
+  font-size: .6rem; color: var(--text-sub);
+  font-weight: 500; line-height: 1; z-index: 2;
+}
+.cal-day-img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.cal-day-emoji {
+  position: absolute; bottom: 2px; right: 3px;
+  font-size: .75rem; line-height: 1; z-index: 2;
+}
+.cal-day.has-entry .cal-day-num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+
+/* Habit progress */
+.habit-summary {
+  margin: 1rem 1.2rem 0;
+  background: var(--parchment); border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+.habit-summary-title {
+  font-size: .72rem; color: var(--text-light); letter-spacing: .12em;
+  margin-bottom: .75rem; text-transform: uppercase;
+}
+.habit-bar-row {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem;
+}
+.habit-bar-label { font-size: .75rem; color: var(--text-sub); min-width: 70px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.habit-bar-track {
+  flex: 1; height: 6px; background: var(--warm-tan);
+  border-radius: 10px; overflow: hidden;
+}
+.habit-bar-fill {
+  height: 100%; background: var(--espresso);
+  border-radius: 10px; transition: width .6s ease;
+}
+.habit-bar-pct { font-size: .7rem; color: var(--latte); min-width: 28px; text-align: right; }
+
+/* FAB */
+.fab {
+  position: fixed; bottom: 1.8rem; right: 1.5rem;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--espresso); color: var(--cream);
+  border: none; font-size: 1.6rem; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(61,43,26,.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s, background .2s;
+  z-index: 200;
+}
+.fab:active { transform: scale(.92); }
+
+/* ============================================================
+   EDITOR VIEW
+   ============================================================ */
+#view-editor { background: var(--cream); }
+.editor-scroll { flex: 1; overflow-y: auto; padding-bottom: 5rem; }
+
+/* Date & weather bar */
+.editor-meta {
+  padding: 1rem 1.2rem .6rem;
+  display: flex; align-items: center; gap: .75rem;
+}
+.editor-date-display {
+  font-family: var(--font-serif);
+  font-size: 1.2rem; color: var(--espresso); flex: 1;
+}
+.editor-date-sub { font-size: .72rem; color: var(--text-light); margin-top: .1rem; }
+
+/* Weather pills */
+.weather-row {
+  display: flex; gap: .4rem; flex-wrap: wrap;
+  padding: 0 1.2rem .8rem;
+}
+.weather-pill {
+  padding: .35rem .7rem; border-radius: 20px;
+  border: 1.5px solid var(--border); background: transparent;
+  font-size: .85rem; cursor: pointer; transition: all .15s;
+  color: var(--text-sub);
+}
+.weather-pill.selected {
+  background: var(--espresso); color: var(--cream); border-color: var(--espresso);
+}
+
+/* Photo upload */
+.photo-area {
+  margin: 0 1.2rem .8rem;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--parchment);
+  border: 2px dashed var(--warm-tan);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative;
+  transition: border-color .2s;
+}
+.photo-area:active { border-color: var(--espresso); }
+.photo-area img {
+  width: 100%; height: 100%; object-fit: cover;
+  position: absolute; inset: 0;
+}
+.photo-placeholder {
+  text-align: center; color: var(--text-light);
+  pointer-events: none;
+}
+.photo-placeholder .icon { font-size: 2.2rem; margin-bottom: .4rem; }
+.photo-placeholder p { font-size: .78rem; }
+.photo-del-btn {
+  position: absolute; top: .6rem; right: .6rem;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(61,43,26,.6); border: none;
+  color: #fff; font-size: .9rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+}
+
+/* Mood row */
+.mood-row {
+  display: flex; justify-content: space-around;
+  padding: .4rem 1.2rem .8rem;
+}
+.mood-btn {
+  font-size: 1.8rem; background: none; border: 2px solid transparent;
+  border-radius: 50%; width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform .15s, border-color .15s;
+}
+.mood-btn:active { transform: scale(.88); }
+.mood-btn.selected { border-color: var(--espresso); background: var(--parchment); }
+
+/* Five-year entries */
+.five-year-section {
+  margin: 0 1.2rem .6rem;
+  background: var(--parchment); border-radius: var(--radius);
+  overflow: hidden;
+}
+.five-year-entry {
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.five-year-entry:last-child { border-bottom: none; }
+.five-year-year {
+  font-size: .68rem; color: var(--latte); letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: .35rem;
+  display: flex; align-items: center; gap: .4rem;
+}
+.five-year-year .yr-tag {
+  background: var(--warm-tan); color: var(--espresso);
+  padding: .1rem .4rem; border-radius: 4px; font-weight: 600;
+}
+.five-year-year .yr-tag.current { background: var(--espresso); color: var(--cream); }
+.five-year-textarea {
+  width: 100%; resize: none;
+  border: none; background: transparent;
+  font-family: var(--font-body); font-size: .88rem;
+  color: var(--text-main); line-height: 1.65;
+  min-height: 60px;
+  outline: none;
+}
+.five-year-past-text {
+  font-size: .88rem; color: var(--text-sub); line-height: 1.65;
+  font-style: italic;
+}
+.five-year-past-mood { font-size: 1rem; margin-left: .4rem; }
+
+/* Collapsible sections */
+.collapse-section {
+  margin: 0 1.2rem .6rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.collapse-header {
+  padding: .8rem 1rem;
+  display: flex; align-items: center; gap: .6rem;
+  cursor: pointer; background: var(--parchment);
+  transition: background .15s;
+  user-select: none;
+}
+.collapse-header:active { background: var(--warm-tan); }
+.collapse-icon { font-size: 1rem; }
+.collapse-title { font-size: .85rem; color: var(--text-sub); flex: 1; letter-spacing: .04em; }
+.collapse-arrow {
+  font-size: .8rem; color: var(--text-light);
+  transition: transform .25s;
+}
+.collapse-section.open .collapse-arrow { transform: rotate(180deg); }
+.collapse-body {
+  display: none; background: var(--cream);
+  padding: .8rem 1rem;
+}
+.collapse-section.open .collapse-body { display: block; }
+
+/* Habit tracker */
+.habit-list { display: flex; flex-direction: column; gap: .4rem; }
+.habit-row {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .5rem .75rem; border-radius: 10px;
+  background: var(--parchment); cursor: pointer;
+  transition: background .15s; min-height: 44px;
+}
+.habit-row:active { background: var(--warm-tan); }
+.habit-check {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--warm-tan);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; transition: all .2s;
+  background: transparent;
+}
+.habit-row.checked .habit-check {
+  background: var(--espresso); border-color: var(--espresso); color: #fff;
+}
+.habit-name { font-size: .85rem; color: var(--text-main); flex: 1; }
+
+/* Gratitude */
+.gratitude-input {
+  width: 100%; border: none; border-bottom: 1.5px solid var(--border);
+  background: transparent; font-family: var(--font-body);
+  font-size: .88rem; color: var(--text-main);
+  padding: .4rem .2rem; outline: none;
+  transition: border-color .2s;
+}
+.gratitude-input:focus { border-color: var(--espresso); }
+
+/* Health tags */
+.health-tags { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
+.health-tag {
+  padding: .35rem .8rem; border-radius: 20px;
+  border: 1.5px solid var(--border); background: transparent;
+  font-size: .8rem; color: var(--text-sub); cursor: pointer;
+  transition: all .15s;
+}
+.health-tag.selected { background: var(--dusty-rose); border-color: var(--dusty-rose); color: #fff; }
+.health-note {
+  width: 100%; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--parchment);
+  font-family: var(--font-body); font-size: .85rem;
+  color: var(--text-main); padding: .6rem .8rem;
+  resize: none; outline: none; min-height: 70px;
+  transition: border-color .2s;
+}
+.health-note:focus { border-color: var(--espresso); }
+
+/* Save button */
+.save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: .9rem 1.2rem; background: var(--cream);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+}
+.btn-save {
+  width: 100%; padding: .9rem; border: none;
+  border-radius: 14px; background: var(--espresso);
+  color: var(--cream); font-family: var(--font-body);
+  font-size: .92rem; cursor: pointer; letter-spacing: .1em;
+  transition: background .2s, transform .1s;
+}
+.btn-save:active { transform: scale(.98); background: var(--dark-brown); }
+
+/* ============================================================
+   SETTINGS VIEW
+   ============================================================ */
+#view-settings { background: var(--cream); }
+.settings-scroll { flex: 1; overflow-y: auto; padding: 1rem 1.2rem 5rem; }
+.settings-section { margin-bottom: 1.5rem; }
+.settings-section-title {
+  font-size: .68rem; color: var(--latte); letter-spacing: .18em;
+  text-transform: uppercase; margin-bottom: .75rem; padding-left: .2rem;
+}
+.settings-card {
+  background: var(--parchment); border-radius: var(--radius);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.settings-row {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+  min-height: 52px;
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-icon { font-size: 1.1rem; width: 28px; flex-shrink: 0; }
+.settings-row-label { font-size: .88rem; color: var(--text-main); flex: 1; }
+.settings-row-value { font-size: .8rem; color: var(--text-light); }
+.settings-row-btn {
+  padding: .35rem .8rem; border: 1.5px solid var(--warm-tan);
+  border-radius: 8px; background: transparent;
+  font-family: var(--font-body); font-size: .78rem;
+  color: var(--text-sub); cursor: pointer;
+  transition: all .15s;
+}
+.settings-row-btn:active { background: var(--warm-tan); }
+.settings-row-input {
+  border: none; background: transparent;
+  font-family: var(--font-body); font-size: .85rem;
+  color: var(--text-main); text-align: right; flex: 1;
+  outline: none; min-width: 0;
+}
+
+/* Habit manager */
+.habit-manager-list { padding: .2rem 0; }
+.habit-manager-row {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .8rem;
+  border-bottom: 1px solid var(--border);
+}
+.habit-manager-row:last-child { border-bottom: none; }
+.habit-manager-name {
+  flex: 1; font-size: .85rem; color: var(--text-main);
+  border: none; background: transparent;
+  font-family: var(--font-body); outline: none;
+  min-width: 0;
+}
+.habit-del-btn {
+  background: none; border: none; font-size: 1rem;
+  color: var(--dusty-rose); cursor: pointer;
+  padding: .2rem; border-radius: 6px; transition: background .15s;
+}
+.habit-del-btn:active { background: var(--parchment); }
+.habit-add-row {
+  display: flex; gap: .5rem; padding: .6rem .8rem;
+  border-top: 1px solid var(--border);
+}
+.habit-add-input {
+  flex: 1; border: none; background: transparent;
+  font-family: var(--font-body); font-size: .85rem;
+  color: var(--text-main); outline: none;
+}
+.habit-add-btn {
+  background: var(--espresso); border: none;
+  color: var(--cream); font-size: .8rem;
+  padding: .35rem .75rem; border-radius: 8px; cursor: pointer;
+}
+
+/* Sync ID display */
+.sync-id-display {
+  font-family: monospace; font-size: .95rem;
+  color: var(--espresso); letter-spacing: .08em;
+  word-break: break-all;
+}
+
+/* ============================================================
+   PDF EXPORT VIEW
+   ============================================================ */
+#view-export { background: var(--cream); }
+.export-scroll { flex: 1; overflow-y: auto; padding: 1rem 1.2rem 3rem; }
+.export-card {
+  background: var(--parchment); border-radius: var(--radius);
+  padding: 1.2rem; margin-bottom: 1rem;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.export-card:active { transform: scale(.98); }
+.export-card-title { font-size: 1rem; color: var(--espresso); margin-bottom: .3rem; }
+.export-card-desc { font-size: .78rem; color: var(--text-light); line-height: 1.5; }
+.export-card-icon { font-size: 2rem; margin-bottom: .6rem; }
+
+/* Month selector for export */
+.export-month-row {
+  display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem;
+}
+.export-month-pill {
+  padding: .3rem .65rem; border-radius: 12px;
+  border: 1.5px solid var(--border); background: transparent;
+  font-size: .75rem; color: var(--text-sub); cursor: pointer;
+  transition: all .15s;
+}
+.export-month-pill.selected { background: var(--espresso); color: var(--cream); border-color: var(--espresso); }
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; background: var(--cream);
+  border-top: 1px solid var(--border);
+  z-index: 150;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: .55rem .4rem .65rem;
+  cursor: pointer; transition: background .15s;
+  border: none; background: transparent;
+}
+.nav-item:active { background: var(--parchment); }
+.nav-item .nav-icon { font-size: 1.3rem; margin-bottom: .15rem; }
+.nav-item .nav-label { font-size: .6rem; color: var(--text-light); letter-spacing: .06em; }
+.nav-item.active .nav-label { color: var(--espresso); }
+.nav-item.active .nav-icon { filter: none; }
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(61,43,26,.45);
+  backdrop-filter: blur(4px);
+  display: none; align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  width: 100%; background: var(--cream);
+  border-radius: 24px 24px 0 0;
+  padding: 1.5rem 1.2rem 2rem;
+  max-height: 80vh; overflow-y: auto;
+  animation: slideUp .3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--warm-tan); margin: 0 auto 1.2rem;
+}
+.modal-title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem; color: var(--espresso);
+  margin-bottom: 1rem; text-align: center;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%);
+  background: var(--dark-brown); color: var(--cream);
+  padding: .6rem 1.2rem; border-radius: 20px;
+  font-size: .82rem; z-index: 9998;
+  opacity: 0; transition: opacity .3s;
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ============================================================
+   Utility
+   ============================================================ */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+input[type="file"] { display: none; }
+</style>
+
 </head>
-<body class="pb-24">
+<body>
 
-<div id="app" class="max-w-md mx-auto px-4 py-6">
-    <!-- Header -->
-    <header class="flex justify-between items-end mb-8">
-        <div>
-            <h1 id="month-title" class="serif text-3xl font-bold text-stone-700">MARCH</h1>
-            <p class="text-xs tracking-widest text-stone-400 mt-1">2026-2030 DIARY</p>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="changeMonth(-1)" class="p-2 text-stone-300"><i data-lucide="chevron-left"></i></button>
-            <button onclick="changeMonth(1)" class="p-2 text-stone-300"><i data-lucide="chevron-right"></i></button>
-        </div>
-    </header>
+<!-- ══════════════════════════════════════════════
+     LOADING
+══════════════════════════════════════════════ -->
 
-    <!-- 頁面：月曆回顧 -->
-    <div id="view-calendar" class="view">
-        <div class="grid grid-cols-7 gap-1 text-[10px] text-center font-bold text-stone-300 mb-3">
-            <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
-        </div>
-        <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
-
-        <div class="mt-10 bg-white/40 p-6 rounded-3xl border border-stone-200">
-            <h3 class="text-xs font-bold mb-5 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-stone-400"></i> 本月習慣達成</h3>
-            <div id="habit-snapshot" class="space-y-4"></div>
-        </div>
-    </div>
-
-    <!-- 頁面：日記編輯 -->
-    <div id="view-editor" class="view hidden">
-        <div class="flex items-center gap-4 mb-6">
-            <button onclick="showPage('calendar')" class="p-1"><i data-lucide="arrow-left"></i></button>
-            <h2 id="edit-date-label" class="serif text-2xl font-bold">4月4日</h2>
-            <div class="flex gap-3 ml-auto" id="weather-selector">
-                <button onclick="setWeather('☀️')" class="weather-btn opacity-20 text-xl" data-val="☀️">☀️</button>
-                <button onclick="setWeather('☁️')" class="weather-btn opacity-20 text-xl" data-val="☁️">☁️</button>
-                <button onclick="setWeather('🌧️')" class="weather-btn opacity-20 text-xl" data-val="🌧️">🌧️</button>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-stone-100 mb-8">
-            <div id="photo-container" class="w-full aspect-[4/3] bg-stone-50 rounded-2xl mb-6 overflow-hidden flex items-center justify-center relative border border-dashed border-stone-200" onclick="document.getElementById('file-input').click()">
-                <div id="photo-placeholder" class="text-stone-300 text-center">
-                    <i data-lucide="camera" class="w-8 h-8 mx-auto mb-2"></i>
-                    <p class="text-xs">記錄今天的影像</p>
-                </div>
-                <img id="edit-photo-img" class="hidden w-full h-full object-cover">
-                <button id="del-photo" onclick="removePhoto(event)" class="hidden absolute top-3 right-3 bg-black/40 text-white p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="previewPhoto(event)">
-
-            <div class="flex justify-between mb-8 px-2">
-                <button onclick="setMood('🥰')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="🥰">🥰</button>
-                <button onclick="setMood('😊')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😊">😊</button>
-                <button onclick="setMood('😌')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😌">😌</button>
-                <button onclick="setMood('😩')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="😩">😩</button>
-                <button onclick="setMood('🤕')" class="mood-btn text-3xl filter grayscale opacity-20 transition-all" data-val="🤕">🤕</button>
-            </div>
-
-            <div class="space-y-2 mb-8">
-                <div class="year-entry">
-                    <div class="year-label"><span>第一年</span><span id="label-year-num">2026</span></div>
-                    <textarea id="entry-text" rows="3" class="w-full border-none p-0 text-base focus:ring-0 resize-none bg-transparent" placeholder="點擊開始撰寫..."></textarea>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <details class="group">
-                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
-                        <span>感恩日記</span>
-                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
-                    </summary>
-                    <div class="pb-4">
-                        <input type="text" id="input-gratitude" class="w-full text-sm bg-stone-50 border-none rounded-xl p-4" placeholder="今天值得感謝的小事">
-                    </div>
-                </details>
-
-                <details class="group">
-                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
-                        <span>習慣打卡</span>
-                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
-                    </summary>
-                    <div class="pb-4 space-y-3" id="habit-editor-list"></div>
-                </details>
-
-                <details class="group">
-                    <summary class="list-none flex justify-between items-center cursor-pointer text-xs font-bold text-stone-400 py-3 border-t">
-                        <span>健康狀況</span>
-                        <i data-lucide="plus" class="w-3 h-3 group-open:rotate-45 transition-transform"></i>
-                    </summary>
-                    <div class="pb-4">
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            <button onclick="toggleHealth('頭痛')" class="health-tag tag-btn" data-val="頭痛">頭痛</button>
-                            <button onclick="toggleHealth('經痛')" class="health-tag tag-btn" data-val="經痛">經痛</button>
-                            <button onclick="toggleHealth('過敏')" class="health-tag tag-btn" data-val="過敏">過敏</button>
-                        </div>
-                        <input type="text" id="health-note" class="w-full text-sm bg-stone-50 border-none rounded-xl p-4" placeholder="補充細節">
-                    </div>
-                </details>
-            </div>
-
-            <button onclick="saveCurrentData()" class="w-full py-5 bg-[#8c7662] text-white rounded-2xl mt-8 font-bold shadow-lg shadow-stone-100 active:scale-95 transition-transform">
-                儲存回憶
-            </button>
-        </div>
-        
-        <div id="past-years-history" class="mt-10 space-y-4 pb-10"></div>
-    </div>
-
-    <!-- 頁面：設定 -->
-    <div id="view-settings" class="view hidden">
-        <div class="bg-white rounded-[2rem] p-8 border border-stone-100 shadow-sm">
-            <h3 class="serif text-2xl font-bold mb-8">帳號與偏好</h3>
-            
-            <div class="mb-10">
-                <label class="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-3">您的唯一識別碼</label>
-                <div class="bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4 text-sm font-mono font-bold text-stone-600 select-all" id="sync-id-display"></div>
-            </div>
-
-            <!-- 習慣管理 -->
-            <div class="mb-10 pt-8 border-t border-stone-50">
-                <label class="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-4">預設習慣清單</label>
-                <div id="global-habit-manager" class="space-y-2 mb-4"></div>
-                <div class="flex gap-2">
-                    <input type="text" id="new-habit-input" class="flex-1 bg-stone-50 border-none rounded-xl px-4 text-sm" placeholder="新增習慣...">
-                    <button onclick="addGlobalHabit()" class="bg-stone-800 text-white px-4 py-2 rounded-xl text-xs font-bold">新增</button>
-                </div>
-                <p class="text-[10px] text-stone-400 mt-4 leading-relaxed italic">修改此清單將影響未來新日記的預設項目，不會更動到過去已儲存的紀錄。</p>
-            </div>
-
-            <div class="space-y-4 pt-8 border-t border-stone-50">
-                <h4 class="text-xs font-bold text-stone-500 uppercase tracking-widest">資料匯出</h4>
-                <div class="grid grid-cols-1 gap-3">
-                    <button onclick="exportViewPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
-                        <span class="flex items-center gap-3"><i data-lucide="grid" class="w-4 h-4 text-stone-400"></i> 月回顧總覽</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
-                    </button>
-                    <button onclick="exportHistoryPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
-                        <span class="flex items-center gap-3"><i data-lucide="book" class="w-4 h-4 text-stone-400"></i> 五年日記內容</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
-                    </button>
-                    <button onclick="exportHabitPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6">
-                        <span class="flex items-center gap-3"><i data-lucide="check-circle" class="w-4 h-4 text-stone-400"></i> 習慣統計表</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
-                    </button>
-                    <button onclick="exportMedicalPDF()" class="w-full py-4 bg-white border border-stone-100 rounded-2xl text-sm flex items-center justify-between px-6 text-red-400/80">
-                        <span class="flex items-center gap-3"><i data-lucide="heart-pulse" class="w-4 h-4"></i> 健康紀錄匯出</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-stone-200"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-4 pt-10 mt-10 border-t border-stone-50">
-                <button onclick="downloadJSONBackup()" class="w-full py-4 bg-stone-800 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2">
-                    <i data-lucide="download" class="w-4 h-4"></i> 備份完整存檔
-                </button>
-                <div class="flex gap-3">
-                    <input type="file" id="import-json" class="hidden" accept=".json" onchange="importJSONBackup(event)">
-                    <button onclick="document.getElementById('import-json').click()" class="flex-1 py-4 bg-stone-100 text-stone-600 rounded-2xl text-sm font-bold">匯入舊檔</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md h-20 border-t border-stone-100 flex justify-around items-center px-8 pb-3">
-        <button onclick="showPage('calendar')" id="nav-calendar" class="flex flex-col items-center gap-1.5 text-[#8c7662]">
-            <i data-lucide="layout-grid" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold">回顧</span>
-        </button>
-        <button onclick="showPage('settings')" id="nav-settings" class="flex flex-col items-center gap-1.5 text-stone-300">
-            <i data-lucide="settings" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold">設定</span>
-        </button>
-    </nav>
+<div class="view active" id="view-loading">
+  <div>
+    <div class="loading-title">五年日記</div>
+    <div class="loading-sub">2026 — 2030</div>
+  </div>
 </div>
 
-<div id="export-container" class="hidden bg-white p-12 text-stone-800"></div>
+<!-- ══════════════════════════════════════════════
+     SYNC ID SETUP
+══════════════════════════════════════════════ -->
+
+<div class="view" id="view-setup">
+  <div class="setup-card">
+    <div class="setup-logo">五年日記</div>
+    <div class="setup-years">2026 · 2027 · 2028 · 2029 · 2030</div>
+
+```
+<label class="setup-label">自訂同步 ID</label>
+<input class="setup-input" id="setup-id-input"
+       placeholder="例：yuyi2026" maxlength="30"
+       autocapitalize="none" autocorrect="off" spellcheck="false">
+<div class="setup-hint">⚠️ 此 ID 為你的資料鑰匙，請妥善記錄。不區分大小寫。</div>
+<button class="btn-primary" id="setup-start-btn">開始使用 →</button>
+
+<div class="setup-divider"><span>或</span></div>
+<button class="btn-secondary" id="setup-random-btn">🎲 自動生成隨機 ID</button>
+```
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     HOME – Monthly Calendar
+══════════════════════════════════════════════ -->
+
+<div class="view" id="view-home">
+  <div class="topbar">
+    <div class="topbar-title">五年日記</div>
+    <div style="display:flex;gap:.5rem;">
+      <button class="icon-btn" id="home-settings-btn" title="設定">⚙️</button>
+    </div>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding-bottom:5rem;">
+    <div class="home-header">
+      <div class="month-nav">
+        <button class="month-nav-arrow" id="prev-month-btn">‹</button>
+        <div class="month-label" id="month-label">2026 年 1 月</div>
+        <button class="month-nav-arrow" id="next-month-btn">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <div class="cal-weekday">日</div><div class="cal-weekday">一</div>
+        <div class="cal-weekday">二</div><div class="cal-weekday">三</div>
+        <div class="cal-weekday">四</div><div class="cal-weekday">五</div>
+        <div class="cal-weekday">六</div>
+      </div>
+    </div>
+
+```
+<div class="cal-grid" id="cal-grid"></div>
+
+<div class="habit-summary" id="habit-summary">
+  <div class="habit-summary-title">本月習慣達成率</div>
+  <div id="habit-bars"></div>
+</div>
+```
+
+  </div>
+
+<button class="fab" id="fab-today" title="今日日記">✏️</button>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     EDITOR
+══════════════════════════════════════════════ -->
+
+<div class="view" id="view-editor">
+  <div class="topbar">
+    <button class="icon-btn" id="editor-back-btn">←</button>
+    <div class="topbar-title" id="editor-title-label">今日日記</div>
+    <div style="width:38px;"></div>
+  </div>
+
+  <div class="editor-scroll" id="editor-scroll">
+    <!-- Date display -->
+    <div class="editor-meta">
+      <div style="flex:1;">
+        <div class="editor-date-display" id="editor-date-display"></div>
+        <div class="editor-date-sub" id="editor-date-sub"></div>
+      </div>
+    </div>
+
+```
+<!-- Weather -->
+<div class="weather-row" id="weather-row">
+  <button class="weather-pill" data-weather="☀️">☀️ 晴</button>
+  <button class="weather-pill" data-weather="⛅">⛅ 多雲</button>
+  <button class="weather-pill" data-weather="🌧️">🌧️ 雨</button>
+  <button class="weather-pill" data-weather="⛈️">⛈️ 雷雨</button>
+  <button class="weather-pill" data-weather="❄️">❄️ 雪</button>
+  <button class="weather-pill" data-weather="🌫️">🌫️ 霧</button>
+</div>
+
+<!-- Photo -->
+<div class="photo-area" id="photo-area">
+  <div class="photo-placeholder" id="photo-placeholder">
+    <div class="icon">📷</div>
+    <p>點擊上傳今日照片</p>
+  </div>
+  <img id="photo-preview" src="" alt="" style="display:none;">
+  <button class="photo-del-btn hidden" id="photo-del-btn">✕</button>
+</div>
+<input type="file" id="photo-input" accept="image/*">
+
+<!-- Mood -->
+<div class="mood-row" id="mood-row">
+  <button class="mood-btn" data-mood="😆">😆</button>
+  <button class="mood-btn" data-mood="☺️">☺️</button>
+  <button class="mood-btn" data-mood="😶">😶</button>
+  <button class="mood-btn" data-mood="😢">😢</button>
+  <button class="mood-btn" data-mood="😡">😡</button>
+</div>
+
+<!-- Five-year entries -->
+<div class="five-year-section" id="five-year-section"></div>
+
+<!-- Habit tracker (collapsible) -->
+<div class="collapse-section" id="collapse-habit">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-habit')">
+    <span class="collapse-icon">✅</span>
+    <span class="collapse-title">習慣打卡</span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body">
+    <div class="habit-list" id="habit-list"></div>
+  </div>
+</div>
+
+<!-- Gratitude (collapsible) -->
+<div class="collapse-section" id="collapse-gratitude">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-gratitude')">
+    <span class="collapse-icon">🌸</span>
+    <span class="collapse-title">感恩日記</span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body">
+    <input class="gratitude-input" id="gratitude-input"
+           placeholder="今天讓我感恩的一件事…" type="text" maxlength="200">
+  </div>
+</div>
+
+<!-- Health (collapsible) -->
+<div class="collapse-section" id="collapse-health">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-health')">
+    <span class="collapse-icon">💊</span>
+    <span class="collapse-title">健康狀況</span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body">
+    <div class="health-tags" id="health-tags">
+      <button class="health-tag" data-tag="頭痛">頭痛</button>
+      <button class="health-tag" data-tag="經痛">經痛</button>
+      <button class="health-tag" data-tag="過敏">過敏</button>
+      <button class="health-tag" data-tag="感冒">感冒</button>
+      <button class="health-tag" data-tag="胃痛">胃痛</button>
+      <button class="health-tag" data-tag="其他">其他</button>
+    </div>
+    <textarea class="health-note" id="health-note"
+              placeholder="詳細症狀或備注…" rows="3"></textarea>
+  </div>
+</div>
+```
+
+  </div>
+
+  <!-- Save bar -->
+
+  <div class="save-bar">
+    <button class="btn-save" id="save-btn">💾 儲存回憶</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SETTINGS
+══════════════════════════════════════════════ -->
+
+<div class="view" id="view-settings">
+  <div class="topbar">
+    <button class="icon-btn" id="settings-back-btn">←</button>
+    <div class="topbar-title">設定</div>
+    <div style="width:38px;"></div>
+  </div>
+
+  <div class="settings-scroll">
+    <!-- Sync -->
+    <div class="settings-section">
+      <div class="settings-section-title">同步 ID</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-row-icon">🔑</div>
+          <div style="flex:1;">
+            <div class="settings-row-label">目前 ID</div>
+            <div class="sync-id-display" id="sync-id-display">—</div>
+          </div>
+          <button class="settings-row-btn" id="copy-sync-id-btn">複製</button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-icon">🔄</div>
+          <div class="settings-row-label">切換帳號</div>
+          <button class="settings-row-btn" id="change-id-btn">更改</button>
+        </div>
+      </div>
+    </div>
+
+```
+<!-- Habits -->
+<div class="settings-section">
+  <div class="settings-section-title">習慣清單</div>
+  <div class="settings-card">
+    <div class="habit-manager-list" id="habit-manager-list"></div>
+    <div class="habit-add-row">
+      <input class="habit-add-input" id="habit-add-input" placeholder="新增習慣…" maxlength="30">
+      <button class="habit-add-btn" id="habit-add-btn">＋ 新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- Data -->
+<div class="settings-section">
+  <div class="settings-section-title">資料管理</div>
+  <div class="settings-card">
+    <div class="settings-row" id="export-json-row">
+      <div class="settings-row-icon">📤</div>
+      <div class="settings-row-label">匯出完整存檔 (JSON)</div>
+      <button class="settings-row-btn" id="export-json-btn">匯出</button>
+    </div>
+    <div class="settings-row" id="import-json-row">
+      <div class="settings-row-icon">📥</div>
+      <div class="settings-row-label">匯入舊存檔 (JSON)</div>
+      <button class="settings-row-btn" id="import-json-btn">匯入</button>
+    </div>
+    <div class="settings-row" id="export-pdf-row" style="cursor:pointer;" onclick="showView('view-export')">
+      <div class="settings-row-icon">📄</div>
+      <div class="settings-row-label">匯出 PDF 報表</div>
+      <div class="settings-row-value">›</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;color:var(--text-light);font-size:.72rem;margin-top:1rem;">
+  五年日記 2026–2030 · v1.0
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     EXPORT PDF
+══════════════════════════════════════════════ -->
+
+<div class="view" id="view-export">
+  <div class="topbar">
+    <button class="icon-btn" id="export-back-btn">←</button>
+    <div class="topbar-title">匯出 PDF</div>
+    <div style="width:38px;"></div>
+  </div>
+
+  <div class="export-scroll">
+    <div class="export-card" id="pdf-monthly-card">
+      <div class="export-card-icon">🗓️</div>
+      <div class="export-card-title">月回顧照片牆</div>
+      <div class="export-card-desc">31 天網格，每格顯示照片縮圖 + 心情 Emoji。</div>
+      <div class="export-month-row" id="pdf-month-sel"></div>
+      <button class="btn-primary" style="margin-top:1rem;" id="pdf-monthly-btn">下載月回顧 PDF</button>
+    </div>
+
+```
+<div class="export-card" id="pdf-diary-card">
+  <div class="export-card-icon">📖</div>
+  <div class="export-card-title">日記本匯出</div>
+  <div class="export-card-desc">依時序匯出圖文，含五年對比欄位。</div>
+  <div class="export-month-row" id="pdf-diary-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-diary-btn">下載日記 PDF</button>
+</div>
+
+<div class="export-card" id="pdf-habit-card">
+  <div class="export-card-icon">📊</div>
+  <div class="export-card-title">習慣達成率表</div>
+  <div class="export-card-desc">統計全年習慣打卡達成率，視覺化呈現。</div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-habit-btn">下載習慣表 PDF</button>
+</div>
+
+<div class="export-card" id="pdf-health-card">
+  <div class="export-card-icon">🏥</div>
+  <div class="export-card-title">健康紀錄表</div>
+  <div class="export-card-desc">過濾身體狀況紀錄，方便就醫參考。</div>
+  <div class="export-month-row" id="pdf-health-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-health-btn">下載健康表 PDF</button>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     BOTTOM NAV (shared for home/settings/export)
+══════════════════════════════════════════════ -->
+
+<nav class="bottom-nav" id="bottom-nav" style="display:none;">
+  <button class="nav-item active" id="nav-home" onclick="showView('view-home');setActiveNav('nav-home')">
+    <span class="nav-icon">🗓️</span>
+    <span class="nav-label">月曆</span>
+  </button>
+  <button class="nav-item" id="nav-today" onclick="openEditorForDate(getTodayKey());setActiveNav('nav-today')">
+    <span class="nav-icon">✏️</span>
+    <span class="nav-label">今日</span>
+  </button>
+  <button class="nav-item" id="nav-export" onclick="showView('view-export');setActiveNav('nav-export')">
+    <span class="nav-icon">📄</span>
+    <span class="nav-label">匯出</span>
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="showView('view-settings');setActiveNav('nav-settings')">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">設定</span>
+  </button>
+</nav>
+
+<!-- Hidden file input for JSON import -->
+
+<input type="file" id="import-json-file" accept=".json" style="display:none;">
+
+<!-- Toast -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
 
 <script>
-    const STORAGE_KEY = 'hiyori_diary_final_v1';
-    let db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"diaries":{}, "habits":["運動", "多喝水", "早起"]}');
-    let viewDate = new Date();
-    let activeDate = "", currentMood = "", currentWeather = "", currentPhoto = "", activeHealth = [];
-    const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+/* ============================================================
+   Firebase config – five-year-diary-d7e00
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAy0QKDrORa_VSecvEbeUxjMkRU4jd-QEM",
+  authDomain: "five-year-diary-d7e00.firebaseapp.com",
+  projectId: "five-year-diary-d7e00",
+  storageBucket: "five-year-diary-d7e00.firebasestorage.app",
+  messagingSenderId: "298457239349",
+  appId: "1:298457239349:web:9183353d8ad790076c867c"
+};
 
-    window.onload = () => { lucide.createIcons(); initID(); renderCalendar(); };
+// ─── NOTE FOR DEPLOYMENT ──────────────────────────────────
+// Replace the apiKey / messagingSenderId / appId above
+// with your actual Firebase credentials.
+// ──────────────────────────────────────────────────────────
 
-    function initID() {
-        let id = localStorage.getItem('hiyori_user_id');
-        if(!id) {
-            id = 'HY-' + Math.random().toString(36).substr(2, 4).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
-            localStorage.setItem('hiyori_user_id', id);
-        }
-        document.getElementById('sync-id-display').innerText = id;
+let db = null;
+let syncId = null;
+let userDoc = null; // Firestore user document reference
+let allData = {};   // { entries: {dateKey: {...}}, habits: [...], settings: {...} }
+
+const YEARS = [2026, 2027, 2028, 2029, 2030];
+const MONTHS_ZH = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const WEEKDAYS_ZH = ['日','一','二','三','四','五','六'];
+const DEFAULT_HABITS = ['運動','閱讀','早睡','喝水','冥想','學習'];
+
+/* ============================================================
+   Utility
+   ============================================================ */
+const $ = id => document.getElementById(id);
+
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function dateKeyToDate(key) {
+  const [y,m,d] = key.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function formatDateZH(dateKey) {
+  const d = dateKeyToDate(dateKey);
+  return `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日 (${WEEKDAYS_ZH[d.getDay()]})`;
+}
+
+function showToast(msg, duration = 2000) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function generateId() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  return Array.from({length: 10}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function toggleCollapse(id) {
+  const el = $(id);
+  el.classList.toggle('open');
+}
+
+/* ============================================================
+   Views
+   ============================================================ */
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $(viewId).classList.add('active');
+
+  const showNav = ['view-home','view-settings','view-export'].includes(viewId);
+  $('bottom-nav').style.display = showNav ? 'flex' : 'none';
+
+  if (viewId === 'view-home') renderCalendar();
+  if (viewId === 'view-settings') renderSettings();
+  if (viewId === 'view-export') renderExport();
+}
+
+function setActiveNav(navId) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  $(navId).classList.add('active');
+}
+
+/* ============================================================
+   Firebase & data layer
+   ============================================================ */
+async function initFirebase() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    return true;
+  } catch (e) {
+    console.warn('Firebase init failed, using local only:', e);
+    return false;
+  }
+}
+
+function getLocalSyncId() {
+  return localStorage.getItem('five-diary-syncid') || null;
+}
+
+function saveLocalSyncId(id) {
+  localStorage.setItem('five-diary-syncid', id);
+}
+
+function getLocalData() {
+  try {
+    return JSON.parse(localStorage.getItem('five-diary-data') || 'null');
+  } catch { return null; }
+}
+
+function saveLocalData() {
+  localStorage.setItem('five-diary-data', JSON.stringify(allData));
+}
+
+async function loadFromFirestore() {
+  if (!db || !syncId) return false;
+  try {
+    userDoc = db.collection('five-year-diary').doc(syncId.toLowerCase());
+    const snap = await userDoc.get();
+    if (snap.exists) {
+      const remote = snap.data();
+      allData = remote;
+      saveLocalData();
+      return true;
+    } else {
+      // New user – push local data (if any) to Firestore
+      await userDoc.set(allData);
+      return true;
+    }
+  } catch (e) {
+    console.warn('Firestore load failed:', e);
+    return false;
+  }
+}
+
+async function saveToFirestore() {
+  if (!db || !userDoc) return;
+  try {
+    await userDoc.set(allData);
+  } catch (e) {
+    console.warn('Firestore save failed, data saved locally:', e);
+  }
+}
+
+async function saveEntry(dateKey, entry) {
+  if (!allData.entries) allData.entries = {};
+  allData.entries[dateKey] = entry;
+  saveLocalData();
+  await saveToFirestore();
+}
+
+async function saveHabits(habits) {
+  allData.habits = habits;
+  saveLocalData();
+  await saveToFirestore();
+}
+
+/* ============================================================
+   Init flow
+   ============================================================ */
+async function init() {
+  await initFirebase();
+
+  // Check for existing sync ID
+  const storedId = getLocalSyncId();
+  const localData = getLocalData();
+
+  if (storedId) {
+    syncId = storedId;
+    allData = localData || { entries: {}, habits: DEFAULT_HABITS };
+    await loadFromFirestore();
+    startApp();
+  } else {
+    showView('view-setup');
+  }
+}
+
+function startApp() {
+  if (!allData.habits) allData.habits = DEFAULT_HABITS;
+  if (!allData.entries) allData.entries = {};
+  showView('view-home');
+  setActiveNav('nav-home');
+  $('bottom-nav').style.display = 'flex';
+}
+
+/* ============================================================
+   Setup screen
+   ============================================================ */
+$('setup-random-btn').addEventListener('click', () => {
+  $('setup-id-input').value = generateId();
+});
+
+$('setup-start-btn').addEventListener('click', async () => {
+  let id = $('setup-id-input').value.trim().toLowerCase();
+  if (!id) { showToast('請輸入同步 ID'); return; }
+  if (id.length < 3) { showToast('ID 至少需要 3 個字元'); return; }
+
+  syncId = id;
+  saveLocalSyncId(id);
+
+  const local = getLocalData();
+  allData = local || { entries: {}, habits: DEFAULT_HABITS };
+
+  $('setup-start-btn').textContent = '連線中…';
+  await loadFromFirestore();
+  $('setup-start-btn').textContent = '開始使用 →';
+  startApp();
+});
+
+/* ============================================================
+   CALENDAR
+   ============================================================ */
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+
+function renderCalendar() {
+  const label = `${calYear} 年 ${calMonth+1} 月`;
+  $('month-label').textContent = label;
+
+  const grid = $('cal-grid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = getTodayKey();
+
+  // Empty cells
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = allData.entries?.[key];
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-day' + (key === today ? ' today' : '') + (entry ? ' has-entry' : '');
+
+    const num = document.createElement('div');
+    num.className = 'cal-day-num';
+    num.textContent = d;
+    cell.appendChild(num);
+
+    if (entry?.photo) {
+      const img = document.createElement('img');
+      img.className = 'cal-day-img';
+      img.src = entry.photo;
+      img.loading = 'lazy';
+      cell.appendChild(img);
     }
 
-    function renderCalendar() {
-        const y = viewDate.getFullYear(), m = viewDate.getMonth();
-        document.getElementById('month-title').innerText = monthNames[m];
-        const firstDay = new Date(y, m, 1).getDay(), daysInMonth = new Date(y, m + 1, 0).getDate();
-        const grid = document.getElementById('calendar-grid');
-        grid.innerHTML = "";
-        for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
-        for(let d=1; d<=daysInMonth; d++) {
-            const dateStr = `${y}-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-            const data = db.diaries[dateStr];
-            grid.innerHTML += `
-                <div class="cal-day ${dateStr === new Date().toISOString().split('T')[0] ? 'today' : ''}" onclick="openEditor('${dateStr}')">
-                    <span class="num">${d}</span>
-                    ${data?.photo ? `<img src="${data.photo}">` : ''}
-                    ${data?.mood ? `<span class="emo">${data.mood}</span>` : ''}
-                </div>`;
-        }
-        renderHabitSnapshot();
+    if (entry?.mood) {
+      const emoji = document.createElement('div');
+      emoji.className = 'cal-day-emoji';
+      emoji.textContent = entry.mood;
+      cell.appendChild(emoji);
     }
 
-    function openEditor(dateStr) {
-        activeDate = dateStr;
-        const [y, m, d] = dateStr.split('-');
-        document.getElementById('edit-date-label').innerText = `${parseInt(m)}月${parseInt(d)}日`;
-        document.getElementById('label-year-num').innerText = y;
-        const data = db.diaries[dateStr] || {};
-        document.getElementById('entry-text').value = data.text || "";
-        document.getElementById('input-gratitude').value = data.gratitude || "";
-        document.getElementById('health-note').value = data.healthNote || "";
-        currentPhoto = data.photo || ""; currentMood = data.mood || ""; currentWeather = data.weather || ""; activeHealth = data.health || [];
-        
-        // 關鍵：如果這天沒有舊的習慣紀錄，就載入目前的預設清單
-        if(!data.habitConfig) data.habitConfig = [...db.habits];
-        if(!data.habitLogs) data.habitLogs = [];
-        
-        updateUI();
-        renderHabitEditor(data);
-        renderHistory(dateStr);
-        showPage('editor');
+    cell.addEventListener('click', () => openEditorForDate(key));
+    grid.appendChild(cell);
+  }
+
+  renderHabitSummary();
+}
+
+function renderHabitSummary() {
+  const bars = $('habit-bars');
+  bars.innerHTML = '';
+  const habits = allData.habits || [];
+  if (!habits.length) return;
+
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  habits.forEach(h => {
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const entry = allData.entries?.[key];
+      if (entry?.habits?.[h]) count++;
+    }
+    const pct = Math.round(count / daysInMonth * 100);
+
+    const row = document.createElement('div');
+    row.className = 'habit-bar-row';
+    row.innerHTML = `
+      <div class="habit-bar-label">${h}</div>
+      <div class="habit-bar-track">
+        <div class="habit-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="habit-bar-pct">${pct}%</div>
+    `;
+    bars.appendChild(row);
+  });
+}
+
+$('prev-month-btn').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+$('next-month-btn').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+$('fab-today').addEventListener('click', () => {
+  openEditorForDate(getTodayKey());
+  setActiveNav('nav-today');
+});
+$('home-settings-btn').addEventListener('click', () => {
+  showView('view-settings');
+  setActiveNav('nav-settings');
+});
+
+/* ============================================================
+   EDITOR
+   ============================================================ */
+let editorDateKey = null;
+let editorEntry = {};
+
+function openEditorForDate(dateKey) {
+  editorDateKey = dateKey;
+  editorEntry = JSON.parse(JSON.stringify(allData.entries?.[dateKey] || {}));
+
+  // Date display
+  $('editor-date-display').textContent = formatDateZH(dateKey);
+  const [y] = dateKey.split('-').map(Number);
+  $('editor-date-sub').textContent = YEARS.includes(y) ? `五年日記 · ${y}` : '';
+
+  // Weather
+  document.querySelectorAll('#weather-row .weather-pill').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.weather === editorEntry.weather);
+  });
+
+  // Photo
+  if (editorEntry.photo) {
+    $('photo-preview').src = editorEntry.photo;
+    $('photo-preview').style.display = 'block';
+    $('photo-placeholder').style.display = 'none';
+    $('photo-del-btn').classList.remove('hidden');
+  } else {
+    $('photo-preview').style.display = 'none';
+    $('photo-placeholder').style.display = 'flex';
+    $('photo-del-btn').classList.add('hidden');
+  }
+
+  // Mood
+  document.querySelectorAll('#mood-row .mood-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.mood === editorEntry.mood);
+  });
+
+  // Five-year section
+  renderFiveYearSection(dateKey);
+
+  // Habits
+  renderEditorHabits();
+
+  // Gratitude
+  $('gratitude-input').value = editorEntry.gratitude || '';
+
+  // Health
+  document.querySelectorAll('#health-tags .health-tag').forEach(t => {
+    t.classList.toggle('selected', (editorEntry.healthTags || []).includes(t.dataset.tag));
+  });
+  $('health-note').value = editorEntry.healthNote || '';
+
+  showView('view-editor');
+  $('editor-scroll').scrollTop = 0;
+}
+
+function renderFiveYearSection(dateKey) {
+  const [y, m, d] = dateKey.split('-');
+  const section = $('five-year-section');
+  section.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+
+  YEARS.forEach(yr => {
+    const key = `${yr}-${m}-${d}`;
+    const past = allData.entries?.[key];
+    const isCurrent = yr === parseInt(y);
+
+    const block = document.createElement('div');
+    block.className = 'five-year-entry';
+
+    const yearLabel = document.createElement('div');
+    yearLabel.className = 'five-year-year';
+    yearLabel.innerHTML = `<span class="yr-tag${isCurrent?' current':''}">${yr}</span>`;
+    if (past?.weather) yearLabel.innerHTML += ` ${past.weather}`;
+    block.appendChild(yearLabel);
+
+    if (isCurrent) {
+      const ta = document.createElement('textarea');
+      ta.className = 'five-year-textarea';
+      ta.placeholder = '今天發生了什麼？';
+      ta.value = editorEntry.text || '';
+      ta.rows = 4;
+      ta.addEventListener('input', () => { editorEntry.text = ta.value; });
+      block.appendChild(ta);
+    } else if (past) {
+      const p = document.createElement('div');
+      p.className = 'five-year-past-text';
+      p.textContent = past.text || '（無文字記錄）';
+      if (past.mood) p.innerHTML += `<span class="five-year-past-mood">${past.mood}</span>`;
+      block.appendChild(p);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'five-year-past-text';
+      empty.textContent = yr > currentYear ? '未來的這一天…' : '這天沒有記錄';
+      empty.style.opacity = '.4';
+      block.appendChild(empty);
     }
 
-    function renderHabitEditor(data) {
-        const container = document.getElementById('habit-editor-list');
-        container.innerHTML = data.habitConfig.map(h => `
-            <div class="flex justify-between items-center bg-stone-50 p-4 rounded-2xl">
-                <span class="text-sm font-medium">${h}</span>
-                <button onclick="toggleHabit('${h}')" class="w-7 h-7 rounded-full border-2 border-stone-200 flex items-center justify-center ${data.habitLogs.includes(h)?'bg-stone-800 border-stone-800 text-white':''}">${data.habitLogs.includes(h)?'<i data-lucide="check" class="w-4 h-4"></i>':''}</button>
-            </div>`).join('');
-        lucide.createIcons();
+    section.appendChild(block);
+  });
+}
+
+function renderEditorHabits() {
+  const list = $('habit-list');
+  list.innerHTML = '';
+  const habits = allData.habits || [];
+  const checkedHabits = editorEntry.habits || {};
+
+  habits.forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'habit-row' + (checkedHabits[h] ? ' checked' : '');
+
+    const check = document.createElement('div');
+    check.className = 'habit-check';
+    if (checkedHabits[h]) check.textContent = '✓';
+
+    const name = document.createElement('div');
+    name.className = 'habit-name';
+    name.textContent = h;
+
+    row.appendChild(check);
+    row.appendChild(name);
+
+    row.addEventListener('click', () => {
+      if (!editorEntry.habits) editorEntry.habits = {};
+      editorEntry.habits[h] = !editorEntry.habits[h];
+      renderEditorHabits();
+    });
+
+    list.appendChild(row);
+  });
+}
+
+// Weather selection
+document.querySelectorAll('#weather-row .weather-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const w = btn.dataset.weather;
+    editorEntry.weather = editorEntry.weather === w ? null : w;
+    document.querySelectorAll('#weather-row .weather-pill').forEach(b =>
+      b.classList.toggle('selected', b.dataset.weather === editorEntry.weather));
+  });
+});
+
+// Mood selection
+document.querySelectorAll('#mood-row .mood-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const m = btn.dataset.mood;
+    editorEntry.mood = editorEntry.mood === m ? null : m;
+    document.querySelectorAll('#mood-row .mood-btn').forEach(b =>
+      b.classList.toggle('selected', b.dataset.mood === editorEntry.mood));
+  });
+});
+
+// Photo
+$('photo-area').addEventListener('click', () => { if (!editorEntry.photo) $('photo-input').click(); });
+$('photo-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    editorEntry.photo = ev.target.result; // full quality base64
+    $('photo-preview').src = ev.target.result;
+    $('photo-preview').style.display = 'block';
+    $('photo-placeholder').style.display = 'none';
+    $('photo-del-btn').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+$('photo-del-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  editorEntry.photo = null;
+  $('photo-preview').style.display = 'none';
+  $('photo-preview').src = '';
+  $('photo-placeholder').style.display = 'flex';
+  $('photo-del-btn').classList.add('hidden');
+});
+
+// Health tags
+document.querySelectorAll('#health-tags .health-tag').forEach(t => {
+  t.addEventListener('click', () => {
+    if (!editorEntry.healthTags) editorEntry.healthTags = [];
+    const tag = t.dataset.tag;
+    const idx = editorEntry.healthTags.indexOf(tag);
+    if (idx >= 0) editorEntry.healthTags.splice(idx, 1);
+    else editorEntry.healthTags.push(tag);
+    t.classList.toggle('selected', editorEntry.healthTags.includes(tag));
+  });
+});
+
+$('health-note').addEventListener('input', () => {
+  editorEntry.healthNote = $('health-note').value;
+});
+$('gratitude-input').addEventListener('input', () => {
+  editorEntry.gratitude = $('gratitude-input').value;
+});
+
+// Save
+$('save-btn').addEventListener('click', async () => {
+  editorEntry.updatedAt = Date.now();
+  $('save-btn').textContent = '儲存中…';
+  $('save-btn').disabled = true;
+  await saveEntry(editorDateKey, editorEntry);
+  $('save-btn').textContent = '💾 儲存回憶';
+  $('save-btn').disabled = false;
+  showToast('已儲存 ✓');
+  showView('view-home');
+  setActiveNav('nav-home');
+});
+
+$('editor-back-btn').addEventListener('click', () => {
+  showView('view-home');
+  setActiveNav('nav-home');
+});
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings() {
+  $('sync-id-display').textContent = syncId || '—';
+  renderHabitManager();
+}
+
+function renderHabitManager() {
+  const list = $('habit-manager-list');
+  list.innerHTML = '';
+  const habits = allData.habits || [];
+
+  habits.forEach((h, i) => {
+    const row = document.createElement('div');
+    row.className = 'habit-manager-row';
+
+    const input = document.createElement('input');
+    input.className = 'habit-manager-name';
+    input.value = h;
+    input.addEventListener('change', async () => {
+      habits[i] = input.value.trim() || h;
+      await saveHabits(habits);
+    });
+
+    const del = document.createElement('button');
+    del.className = 'habit-del-btn';
+    del.textContent = '🗑';
+    del.addEventListener('click', async () => {
+      habits.splice(i, 1);
+      await saveHabits([...habits]);
+      renderHabitManager();
+    });
+
+    row.appendChild(input);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+$('habit-add-btn').addEventListener('click', async () => {
+  const val = $('habit-add-input').value.trim();
+  if (!val) return;
+  const habits = allData.habits || [];
+  habits.push(val);
+  await saveHabits(habits);
+  $('habit-add-input').value = '';
+  renderHabitManager();
+  showToast('已新增習慣');
+});
+
+$('habit-add-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('habit-add-btn').click();
+});
+
+$('copy-sync-id-btn').addEventListener('click', () => {
+  navigator.clipboard?.writeText(syncId).then(() => showToast('已複製 ID ✓'));
+});
+
+$('change-id-btn').addEventListener('click', () => {
+  if (!confirm('切換帳號將清除本機快取，確定繼續？')) return;
+  localStorage.removeItem('five-diary-syncid');
+  location.reload();
+});
+
+$('settings-back-btn').addEventListener('click', () => {
+  showView('view-home');
+  setActiveNav('nav-home');
+});
+
+// JSON export
+$('export-json-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(allData, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `five-diary-${syncId}-${getTodayKey()}.json`;
+  a.click();
+  showToast('匯出完成 ✓');
+});
+
+// JSON import
+$('import-json-btn').addEventListener('click', () => $('import-json-file').click());
+$('import-json-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const data = JSON.parse(text);
+    if (!data.entries && !data.habits) throw new Error('格式不符');
+    allData = data;
+    saveLocalData();
+    await saveToFirestore();
+    showToast('匯入成功 ✓');
+    renderCalendar();
+  } catch {
+    showToast('匯入失敗，請確認檔案格式');
+  }
+  e.target.value = '';
+});
+
+/* ============================================================
+   PDF EXPORT
+   ============================================================ */
+function renderExport() {
+  const selIds = ['pdf-month-sel','pdf-diary-month-sel','pdf-health-month-sel'];
+  selIds.forEach(id => {
+    const container = $(id);
+    container.innerHTML = '';
+    MONTHS_ZH.forEach((m, i) => {
+      const pill = document.createElement('button');
+      pill.className = 'export-month-pill' + (i === new Date().getMonth() ? ' selected' : '');
+      pill.textContent = m;
+      pill.dataset.month = i;
+      pill.addEventListener('click', () => {
+        container.querySelectorAll('.export-month-pill').forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+      });
+      container.appendChild(pill);
+    });
+  });
+}
+
+$('export-back-btn').addEventListener('click', () => {
+  showView('view-settings');
+  setActiveNav('nav-settings');
+});
+
+function getSelectedMonth(selId) {
+  const sel = $(selId).querySelector('.selected');
+  return sel ? parseInt(sel.dataset.month) : new Date().getMonth();
+}
+
+// Monthly photo wall PDF
+$('pdf-monthly-btn').addEventListener('click', async () => {
+  const month = getSelectedMonth('pdf-month-sel');
+  const year = calYear;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(22);
+  doc.text(`${year} / ${month+1}  Monthly Review`, 148, 20, {align:'center'});
+
+  const cols = 7; const rows = 5;
+  const marginX = 10; const marginY = 30;
+  const cellW = (297 - marginX*2) / cols;
+  const cellH = (210 - marginY - 10) / rows;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  // Weekday headers
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((w, i) => {
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(w, marginX + i*cellW + cellW/2, marginY-3, {align:'center'});
+  });
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const pos = firstDay + d - 1;
+    const col = pos % 7; const row = Math.floor(pos / 7);
+    const x = marginX + col * cellW;
+    const y = marginY + row * cellH;
+
+    // Cell background
+    doc.setFillColor(245, 240, 232);
+    doc.roundedRect(x+.5, y+.5, cellW-1, cellH-1, 2, 2, 'F');
+
+    // Date number
+    doc.setFontSize(7); doc.setTextColor(122, 92, 64);
+    doc.text(String(d), x+2, y+5);
+
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = allData.entries?.[key];
+
+    if (entry?.photo) {
+      try {
+        doc.addImage(entry.photo, 'JPEG', x+.5, y+7, cellW-1, cellH-8);
+      } catch {}
+    }
+    if (entry?.mood) {
+      doc.setFontSize(9);
+      doc.text(entry.mood, x + cellW - 5, y + cellH - 2);
+    }
+    doc.setTextColor(61,43,26);
+  }
+
+  doc.save(`五年日記-月回顧-${year}-${month+1}.pdf`);
+  showToast('PDF 已下載 ✓');
+});
+
+// Diary PDF
+$('pdf-diary-btn').addEventListener('click', async () => {
+  const month = getSelectedMonth('pdf-diary-month-sel');
+  const year = calYear;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let firstPage = true;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = allData.entries?.[key];
+    if (!entry) continue;
+
+    if (!firstPage) doc.addPage();
+    firstPage = false;
+
+    doc.setFillColor(245,240,232);
+    doc.rect(0,0,210,297,'F');
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(61,43,26);
+    doc.text(`${year}.${month+1}.${d}`, 15, 20);
+
+    if (entry.weather) { doc.setFontSize(11); doc.text(entry.weather, 160, 20); }
+    if (entry.mood)    { doc.setFontSize(11); doc.text(entry.mood, 180, 20); }
+
+    let curY = 30;
+    if (entry.photo) {
+      try {
+        doc.addImage(entry.photo, 'JPEG', 15, curY, 80, 60);
+        curY += 65;
+      } catch {}
     }
 
-    function toggleHabit(h) {
-        const d = db.diaries[activeDate];
-        const i = d.habitLogs.indexOf(h); if(i > -1) d.habitLogs.splice(i,1); else d.habitLogs.push(h);
-        renderHabitEditor(d);
-    }
+    // Five year text
+    YEARS.forEach(yr => {
+      const k2 = `${yr}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const e2 = allData.entries?.[k2];
+      if (!e2?.text) return;
+      doc.setFontSize(8); doc.setTextColor(180,156,120);
+      doc.text(`${yr}`, 15, curY); curY += 4;
+      doc.setFontSize(9); doc.setTextColor(61,43,26);
+      const lines = doc.splitTextToSize(e2.text, 180);
+      doc.text(lines, 15, curY); curY += lines.length * 5 + 3;
+    });
+  }
 
-    function updateUI() {
-        if(currentPhoto) {
-            document.getElementById('edit-photo-img').src = currentPhoto;
-            document.getElementById('edit-photo-img').classList.remove('hidden');
-            document.getElementById('photo-placeholder').classList.add('hidden');
-            document.getElementById('del-photo').classList.remove('hidden');
-        } else {
-            document.getElementById('edit-photo-img').classList.add('hidden');
-            document.getElementById('photo-placeholder').classList.remove('hidden');
-            document.getElementById('del-photo').classList.add('hidden');
-        }
-        document.querySelectorAll('.mood-btn').forEach(b => {
-            b.style.filter = (b.dataset.val === currentMood) ? 'grayscale(0)' : 'grayscale(1)';
-            b.style.opacity = (b.dataset.val === currentMood) ? '1' : '0.2';
-            b.style.transform = (b.dataset.val === currentMood) ? 'scale(1.2)' : 'scale(1)';
-        });
-        document.querySelectorAll('.weather-btn').forEach(b => b.style.opacity = (b.dataset.val === currentWeather) ? '1' : '0.2');
-        document.querySelectorAll('.health-tag').forEach(t => t.classList.toggle('active', activeHealth.includes(t.dataset.val)));
-    }
+  if (firstPage) { showToast('本月無日記記錄'); return; }
+  doc.save(`五年日記-日記本-${year}-${month+1}.pdf`);
+  showToast('PDF 已下載 ✓');
+});
 
-    function saveCurrentData() {
-        const existing = db.diaries[activeDate] || {};
-        db.diaries[activeDate] = { 
-            ...existing, 
-            text: document.getElementById('entry-text').value, 
-            mood: currentMood, 
-            weather: currentWeather, 
-            photo: currentPhoto, 
-            gratitude: document.getElementById('input-gratitude').value, 
-            health: activeHealth, 
-            healthNote: document.getElementById('health-note').value 
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        showPage('calendar');
-    }
+// Habit PDF
+$('pdf-habit-btn').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const habits = allData.habits || [];
 
-    // --- 全域習慣管理 ---
-    function renderGlobalHabits() {
-        const container = document.getElementById('global-habit-manager');
-        container.innerHTML = db.habits.map((h, idx) => `
-            <div class="flex justify-between items-center bg-white border border-stone-100 p-3 rounded-xl shadow-sm">
-                <span class="text-sm">${h}</span>
-                <button onclick="removeGlobalHabit(${idx})" class="text-stone-300 hover:text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </div>
-        `).join('');
-        lucide.createIcons();
-    }
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(61,43,26);
+  doc.text('習慣達成率統計', 148, 15, {align:'center'});
 
-    function addGlobalHabit() {
-        const val = document.getElementById('new-habit-input').value.trim();
-        if(val && !db.habits.includes(val)) {
-            db.habits.push(val);
-            document.getElementById('new-habit-input').value = "";
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-            renderGlobalHabits();
-        }
-    }
+  const months = MONTHS_ZH;
+  const colW = (297 - 50) / 12;
+  const rowH = 12;
+  const startX = 50; const startY = 25;
 
-    function removeGlobalHabit(idx) {
-        db.habits.splice(idx, 1);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        renderGlobalHabits();
-    }
+  // Headers
+  doc.setFontSize(7); doc.setFont('helvetica','normal');
+  months.forEach((m,i) => {
+    doc.text(m, startX + i*colW + colW/2, startY, {align:'center'});
+  });
 
-    function renderHabitSnapshot() {
-        const container = document.getElementById('habit-snapshot');
-        const curM = (viewDate.getMonth()+1).toString().padStart(2,'0');
-        // 快照只顯示目前清單中的習慣在當月的達成狀況
-        container.innerHTML = db.habits.map(h => {
-            let count = 0; Object.keys(db.diaries).forEach(d => { if(d.includes(`-${curM}-`) && db.diaries[d].habitLogs?.includes(h)) count++; });
-            return `<div><div class="flex justify-between text-[10px] mb-2 font-bold text-stone-500 uppercase"><span>${h}</span><span>${count} DAYS</span></div><div class="w-full h-1 bg-stone-100 rounded-full"><div class="h-full bg-stone-400 rounded-full" style="width: ${Math.min(100,(count/30)*100)}%"></div></div></div>`;
-        }).join('');
-    }
+  habits.forEach((h, hi) => {
+    const y = startY + 8 + hi * rowH;
+    doc.setFontSize(8); doc.setTextColor(61,43,26);
+    doc.text(h, 5, y+4);
 
-    function renderHistory(dateStr) {
-        const md = dateStr.substring(5), thisY = dateStr.split('-')[0], container = document.getElementById('past-years-history');
-        container.innerHTML = `<h3 class="text-xs font-bold text-stone-400 mb-6 uppercase tracking-widest px-2">歷年的今天</h3>`;
-        let found = false;
-        Object.keys(db.diaries).sort().reverse().forEach(key => {
-            if(key.endsWith(md) && key.split('-')[0] !== thisY) {
-                found = true; const item = db.diaries[key];
-                container.innerHTML += `<div class="bg-white p-5 rounded-[1.5rem] flex gap-5 border border-stone-100 shadow-sm"><div class="text-center min-w-[45px]"><div class="text-[10px] text-stone-300 font-bold">${key.split('-')[0]}</div><div class="text-2xl mt-1">${item.mood || '📖'}</div></div><div class="flex-1"><p class="text-sm text-stone-500 leading-relaxed">${item.text || ''}</p></div>${item.photo ? `<img src="${item.photo}" class="w-16 h-16 rounded-xl object-cover">` : ''}</div>`;
-            }
-        });
-        if(!found) container.innerHTML += `<p class="text-xs text-stone-300 text-center py-10 italic">尚未有往年的回憶</p>`;
-    }
+    months.forEach((_, mi) => {
+      const daysInM = new Date(calYear, mi+1, 0).getDate();
+      let cnt = 0;
+      for (let d = 1; d <= daysInM; d++) {
+        const key = `${calYear}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (allData.entries?.[key]?.habits?.[h]) cnt++;
+      }
+      const pct = cnt / daysInM;
+      const alpha = Math.round(pct * 200);
+      doc.setFillColor(122, 92, 64);
+      doc.setGState && doc.setGState(new doc.GState({opacity: pct}));
+      doc.rect(startX + mi*colW + 1, y, colW-2, rowH-2, 'F');
+      doc.setGState && doc.setGState(new doc.GState({opacity: 1}));
+      doc.setFontSize(6); doc.setTextColor(255,255,255);
+      if (pct > 0) doc.text(`${Math.round(pct*100)}%`, startX + mi*colW + colW/2, y+rowH/2+1, {align:'center'});
+    });
+  });
 
-    function showPage(p) {
-        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-        document.getElementById(`view-${p}`).classList.remove('hidden');
-        document.querySelectorAll('nav button').forEach(b => b.className = 'flex flex-col items-center gap-1.5 text-stone-300');
-        document.getElementById(`nav-${p==='settings'?'settings':'calendar'}`).className = 'flex flex-col items-center gap-1.5 text-[#8c7662]';
-        if(p==='calendar') renderCalendar();
-        if(p==='settings') renderGlobalHabits();
-        lucide.createIcons();
-    }
+  doc.save(`五年日記-習慣統計-${calYear}.pdf`);
+  showToast('PDF 已下載 ✓');
+});
 
-    function previewPhoto(e) {
-        const file = e.target.files[0]; if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => { currentPhoto = event.target.result; updateUI(); };
-        reader.readAsDataURL(file);
-    }
-    function removePhoto(e) { e.stopPropagation(); currentPhoto = ""; updateUI(); }
-    function changeMonth(dir) { viewDate.setMonth(viewDate.getMonth()+dir); renderCalendar(); }
-    function setWeather(w) { currentWeather = w; updateUI(); }
-    function setMood(m) { currentMood = m; updateUI(); }
-    function toggleHealth(h) { const i = activeHealth.indexOf(h); if(i>-1) activeHealth.splice(i,1); else activeHealth.push(h); updateUI(); }
-    function downloadJSONBackup() { const blob = new Blob([JSON.stringify(db)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Hiyori_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
-    function importJSONBackup(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (event) => { db = JSON.parse(event.target.result); localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); alert("匯入成功！"); renderCalendar(); }; reader.readAsText(file); }
-    function exportToPDF(el, name) { html2pdf().set({ margin: 1, filename: name, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4' } }).from(el).save(); }
-    function exportViewPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">${viewDate.getFullYear()}年 ${viewDate.getMonth()+1}月 回顧</h1><div class="grid grid-cols-7 gap-3">${document.getElementById('calendar-grid').innerHTML}</div>`; exportToPDF(c, 'Monthly.pdf'); }
-    function exportHistoryPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">五年日記內容</h1>` + Object.keys(db.diaries).sort().map(d => `<div style="border-bottom: 1px solid #eee; padding: 25px 0;"><h3 class="serif">${d} ${db.diaries[d].mood}</h3><p>${db.diaries[d].text}</p></div>`).join(''); exportToPDF(c, 'History.pdf'); }
-    function exportHabitPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">習慣打卡統計</h1>` + document.getElementById('habit-snapshot').parentElement.innerHTML; exportToPDF(c, 'Habits.pdf'); }
-    function exportMedicalPDF() { const c = document.getElementById('export-container'); c.innerHTML = `<h1 class="serif text-3xl mb-8">健康筆記</h1>` + Object.keys(db.diaries).sort().map(d => db.diaries[d].healthNote || db.diaries[d].health?.length ? `<div style="padding: 15px; background: #f9f9f9; margin-bottom: 10px;"><h4>${d}</h4><p>${db.diaries[d].health?.join(', ')}</p><p>${db.diaries[d].healthNote}</p></div>` : '').join(''); exportToPDF(c, 'Medical.pdf'); }
+// Health PDF
+$('pdf-health-btn').addEventListener('click', () => {
+  const month = getSelectedMonth('pdf-health-month-sel');
+  const year = calYear;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(61,43,26);
+  doc.text(`健康紀錄 ${year}/${month+1}`, 105, 15, {align:'center'});
+
+  let y = 30;
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  ['日期','症狀','備注'].forEach((h, i) => {
+    doc.text(h, [15,50,120][i], y);
+  });
+  y += 4;
+  doc.setDrawColor(180,156,120);
+  doc.line(10, y, 200, y); y += 5;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = allData.entries?.[key];
+    if (!entry?.healthTags?.length && !entry?.healthNote) continue;
+
+    if (y > 270) { doc.addPage(); y = 20; }
+
+    doc.setTextColor(61,43,26);
+    doc.text(`${month+1}/${d}`, 15, y);
+    if (entry.healthTags?.length) doc.text(entry.healthTags.join('、'), 50, y);
+    if (entry.healthNote) {
+      const lines = doc.splitTextToSize(entry.healthNote, 80);
+      doc.text(lines, 120, y);
+      y += lines.length * 4;
+    } else y += 7;
+  }
+
+  doc.save(`五年日記-健康紀錄-${year}-${month+1}.pdf`);
+  showToast('PDF 已下載 ✓');
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Slight delay for smooth loading animation
+  setTimeout(init, 800);
+});
 </script>
 
 </body>
 </html>
-

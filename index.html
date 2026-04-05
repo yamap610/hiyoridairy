@@ -223,6 +223,14 @@ body::before {
   font-size: .75rem; line-height: 1; z-index: 2;
 }
 .cal-day.has-entry .cal-day-num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+/* 無照片時顯示已記錄小圓點 */
+.cal-day.has-entry:not(.has-photo)::after {
+  content: '';
+  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--espresso); z-index: 2;
+}
+.cal-day.has-photo::after { display: none; }
 
 /* Habit progress */
 .habit-summary {
@@ -659,9 +667,57 @@ body::before {
 .toast.show { opacity: 1; }
 
 /* ============================================================
+   DETAIL VIEW
+   ============================================================ */
+#view-detail { background: var(--cream); }
+.detail-photo {
+  width: 100%; aspect-ratio: 4/3;
+  object-fit: cover; border-radius: var(--radius);
+  margin-bottom: .8rem; display: block;
+}
+.detail-meta-row {
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: .5rem; flex-wrap: wrap;
+}
+.detail-pill {
+  padding: .25rem .65rem; border-radius: 20px;
+  background: var(--parchment); font-size: .8rem;
+  color: var(--text-sub); border: 1px solid var(--border);
+}
+.detail-section-title {
+  font-size: .68rem; color: var(--latte);
+  letter-spacing: .12em; margin: 1rem 0 .4rem;
+}
+.detail-text {
+  font-size: .9rem; color: var(--text-main);
+  line-height: 1.75; white-space: pre-wrap;
+}
+.detail-no-entry {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--text-light); font-size: .88rem; line-height: 2;
+}
+.detail-year-block {
+  background: var(--parchment); border-radius: 12px;
+  padding: .7rem .9rem; margin-bottom: .5rem;
+}
+.detail-gratitude-item {
+  display: flex; align-items: flex-start; gap: .5rem;
+  padding: .35rem 0; border-bottom: 1px solid var(--border);
+  font-size: .85rem; color: var(--text-main); line-height: 1.5;
+}
+.detail-gratitude-item:last-child { border-bottom: none; }
+.detail-gratitude-num {
+  font-size: .7rem; color: var(--latte);
+  min-width: 16px; padding-top: .15rem;
+}
+/* Crop modal */
+#crop-container { height: 60vw; max-height: 340px; }
+.gratitude-input { border-radius: 10px; }
+.gratitude-input:focus { border-color: var(--espresso) !important; outline: none; }
+
+/* ============================================================
    Utility
    ============================================================ */
-.hidden { display: none !important; }
 .text-center { text-align: center; }
 input[type="file"] { display: none; }
 </style>
@@ -719,6 +775,9 @@ input[type="file"] { display: none; }
         <div class="month-label" id="month-label">2026 年 1 月</div>
         <button class="month-nav-arrow" id="next-month-btn">›</button>
       </div>
+      <div id="return-today-bar" style="display:none;text-align:center;margin-bottom:.4rem;">
+        <button id="return-today-btn" style="background:var(--parchment);border:1.5px solid var(--warm-tan);color:var(--espresso);font-family:var(--font-body);font-size:.78rem;padding:.3rem .9rem;border-radius:20px;cursor:pointer;letter-spacing:.06em;">↩ 返回今日</button>
+      </div>
       <div class="cal-weekdays">
         <div class="cal-weekday">日</div><div class="cal-weekday">一</div>
         <div class="cal-weekday">二</div><div class="cal-weekday">三</div>
@@ -734,8 +793,37 @@ input[type="file"] { display: none; }
       <div id="habit-bars"></div>
     </div>
   </div>
+</div>
 
-  <button class="fab" id="fab-today" title="新增今日日記">＋</button>
+<!-- ══════════════════════════════════════════════
+     DETAIL VIEW (read-only)
+══════════════════════════════════════════════ -->
+<div class="view" id="view-detail">
+  <div class="topbar">
+    <button class="icon-btn" id="detail-back-btn">←</button>
+    <div class="topbar-title" id="detail-title-label">日記詳情</div>
+    <button class="icon-btn" id="detail-edit-btn" title="編輯">✏️</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1rem 1.2rem 5rem;">
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     CROP MODAL
+══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="crop-modal">
+  <div class="modal-sheet" style="max-height:92vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">裁切照片</div>
+    <div id="crop-container" style="position:relative;width:100%;overflow:hidden;background:#1a1a1a;border-radius:12px;touch-action:none;user-select:none;" >
+      <img id="crop-img" style="position:absolute;transform-origin:0 0;cursor:grab;" draggable="false">
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem;">
+      <button class="btn-secondary" id="crop-cancel-btn" style="flex:1;">取消</button>
+      <button class="btn-primary" id="crop-confirm-btn" style="flex:1;">確認裁切</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
@@ -805,12 +893,13 @@ input[type="file"] { display: none; }
     <div class="collapse-section" id="collapse-gratitude">
       <div class="collapse-header" onclick="toggleCollapse('collapse-gratitude')">
         <span class="collapse-icon">🌸</span>
-        <span class="collapse-title">感恩日記</span>
+        <span class="collapse-title">感恩日記 <span style="font-size:.7rem;color:var(--text-light);">（最多 3 件）</span></span>
         <span class="collapse-arrow">▾</span>
       </div>
-      <div class="collapse-body">
-        <input class="gratitude-input" id="gratitude-input"
-               placeholder="今天讓我感恩的一件事…" type="text" maxlength="200">
+      <div class="collapse-body" style="display:flex;flex-direction:column;gap:.5rem;">
+        <textarea class="gratitude-input" id="gratitude-input-1" placeholder="今天讓我感恩的第 1 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
+        <textarea class="gratitude-input" id="gratitude-input-2" placeholder="今天讓我感恩的第 2 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
+        <textarea class="gratitude-input" id="gratitude-input-3" placeholder="今天讓我感恩的第 3 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
       </div>
     </div>
 
@@ -924,10 +1013,24 @@ input[type="file"] { display: none; }
   </div>
 
   <div class="export-scroll">
+    <!-- 年份選取器（全域） -->
+    <div style="margin-bottom:.8rem;">
+      <div class="export-card-desc" style="margin-bottom:.4rem;color:var(--text-sub);font-size:.75rem;">顯示年份</div>
+      <div style="display:flex;gap:.4rem;">
+        <select id="export-year-sel" style="flex:1;padding:.5rem .7rem;border:1.5px solid var(--warm-tan);border-radius:10px;background:var(--parchment);font-family:var(--font-body);font-size:.85rem;color:var(--text-main);outline:none;">
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+          <option value="2029">2029</option>
+          <option value="2030">2030</option>
+        </select>
+      </div>
+    </div>
+
     <div class="export-card" id="pdf-monthly-card">
       <div class="export-card-icon">🗓️</div>
       <div class="export-card-title">月回顧照片牆</div>
-      <div class="export-card-desc">31 天網格，每格顯示照片縮圖 + 心情 Emoji。</div>
+      <div class="export-card-desc">31 天網格，每格顯示照片縮圖（正方形格）。無照片日期僅顯示日期數字。</div>
       <div class="export-month-row" id="pdf-month-sel"></div>
       <button class="btn-primary" style="margin-top:1rem;" id="pdf-monthly-btn">下載月回顧 PNG</button>
     </div>
@@ -935,9 +1038,17 @@ input[type="file"] { display: none; }
     <div class="export-card" id="pdf-diary-card">
       <div class="export-card-icon">📖</div>
       <div class="export-card-title">日記本匯出</div>
-      <div class="export-card-desc">依時序匯出圖文，含五年對比欄位。</div>
+      <div class="export-card-desc">雙欄排版：左邊正方形照片，右邊日記內容與感恩日記。心情與天氣置於照片下方。</div>
       <div class="export-month-row" id="pdf-diary-month-sel"></div>
       <button class="btn-primary" style="margin-top:1rem;" id="pdf-diary-btn">下載日記 PNG</button>
+    </div>
+
+    <div class="export-card" id="pdf-mood-card">
+      <div class="export-card-icon">💭</div>
+      <div class="export-card-title">Mood Tracker 心情追蹤表</div>
+      <div class="export-card-desc">以月份為單位，每日心情以色塊標記，一眼看出整月情緒變化。</div>
+      <div class="export-month-row" id="pdf-mood-month-sel"></div>
+      <button class="btn-primary" style="margin-top:1rem;" id="pdf-mood-btn">下載心情追蹤 PNG</button>
     </div>
 
     <div class="export-card" id="pdf-habit-card">
@@ -965,9 +1076,9 @@ input[type="file"] { display: none; }
     <span class="nav-icon">🗓️</span>
     <span class="nav-label">月曆</span>
   </button>
-  <button class="nav-item" id="nav-today" onclick="openEditorForDate(getTodayKey());setActiveNav('nav-today')">
-    <span class="nav-icon">✏️</span>
-    <span class="nav-label">今日</span>
+  <button class="nav-item" id="nav-today" onclick="openDetailForDate(getTodayKey());setActiveNav('nav-today')">
+    <span class="nav-icon">📖</span>
+    <span class="nav-label">今日日記</span>
   </button>
   <button class="nav-item" id="nav-export" onclick="showView('view-export');setActiveNav('nav-export')">
     <span class="nav-icon">📄</span>
@@ -1048,7 +1159,7 @@ function showView(viewId) {
   $(viewId).classList.add('active');
   const showNav = ['view-home','view-settings','view-export'].includes(viewId);
   $('bottom-nav').style.display = showNav ? 'flex' : 'none';
-  if (viewId === 'view-home') renderCalendar();
+  if (viewId === 'view-home') { renderCalendar(); updateReturnTodayBar(); }
   if (viewId === 'view-settings') renderSettings();
   if (viewId === 'view-export') renderExport();
 }
@@ -1151,9 +1262,27 @@ async function saveEntry(dateKey, entry) {
 }
 
 async function saveHabits(habits) {
-  allData.habits = habits;
+  // 習慣綁定到「當月」，key 格式 habitsYYYY-MM
+  const monthKey = `habits${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  if (!allData.habitsByMonth) allData.habitsByMonth = {};
+  allData.habitsByMonth[monthKey] = habits;
+  allData.habits = habits; // 仍保留全域 habits 作為當月快取
   saveLocalData();
   await saveToFirestore();
+}
+
+function getHabitsForMonth(year, month) {
+  // 優先取當月習慣，找不到則 fallback 到最近一個有設定的月份
+  if (allData.habitsByMonth) {
+    const key = `habits${year}-${String(month+1).padStart(2,'0')}`;
+    if (allData.habitsByMonth[key]) return allData.habitsByMonth[key];
+    // Fallback: 找最近的前月設定
+    for (let m = month - 1; m >= 0; m--) {
+      const k2 = `habits${year}-${String(m+1).padStart(2,'0')}`;
+      if (allData.habitsByMonth[k2]) return allData.habitsByMonth[k2];
+    }
+  }
+  return allData.habits || [];
 }
 
 /* ============================================================
@@ -1215,6 +1344,7 @@ function renderCalendar() {
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
   const today = getTodayKey();
+  const todayDate = new Date(); todayDate.setHours(0,0,0,0);
 
   for (let i = 0; i < firstDay; i++) {
     const e = document.createElement('div');
@@ -1224,8 +1354,21 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry = allData.entries?.[key];
+    const cellDate = new Date(calYear, calMonth, d);
+    // 鎖定：只能點選過去到今天（2026–2030 範圍）
+    const isFuture = cellDate > todayDate;
+    const outOfRange = calYear < 2026 || calYear > 2030;
     const cell = document.createElement('div');
-    cell.className = 'cal-day' + (key===today?' today':'') + (entry?' has-entry':'');
+    const hasPhoto = !!entry?.photo;
+    cell.className = 'cal-day'
+      + (key===today?' today':'')
+      + (entry?' has-entry':'')
+      + (hasPhoto?' has-photo':'')
+      + (isFuture||outOfRange?' future':'');
+    if (isFuture||outOfRange) {
+      cell.style.opacity = '.4';
+      cell.style.cursor = 'default';
+    }
     const num = document.createElement('div');
     num.className = 'cal-day-num';
     num.textContent = d;
@@ -1237,13 +1380,15 @@ function renderCalendar() {
       img.loading = 'lazy';
       cell.appendChild(img);
     }
-    if (entry?.mood) {
+    if (entry?.mood && !entry?.photo) {
       const em = document.createElement('div');
       em.className = 'cal-day-emoji';
       em.textContent = entry.mood;
       cell.appendChild(em);
     }
-    cell.addEventListener('click', () => openEditorForDate(key));
+    if (!isFuture && !outOfRange) {
+      cell.addEventListener('click', () => openDetailForDate(key));
+    }
     grid.appendChild(cell);
   }
   renderHabitSummary();
@@ -1252,7 +1397,7 @@ function renderCalendar() {
 function renderHabitSummary() {
   const bars = $('habit-bars');
   bars.innerHTML = '';
-  const habits = allData.habits || [];
+  const habits = getHabitsForMonth(calYear, calMonth);
   if (!habits.length) return;
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
   habits.forEach(h => {
@@ -1272,13 +1417,177 @@ function renderHabitSummary() {
 }
 
 $('prev-month-btn').addEventListener('click', () => {
-  calMonth--; if (calMonth < 0) { calMonth=11; calYear--; } renderCalendar();
+  const today = new Date();
+  const newMonth = calMonth - 1;
+  const newYear  = newMonth < 0 ? calYear - 1 : calYear;
+  const nm       = newMonth < 0 ? 11 : newMonth;
+  // 不能回到 2026 以前
+  if (newYear < 2026) return;
+  calYear = newYear; calMonth = nm;
+  updateReturnTodayBar();
+  renderCalendar();
 });
 $('next-month-btn').addEventListener('click', () => {
-  calMonth++; if (calMonth > 11) { calMonth=0; calYear++; } renderCalendar();
+  const today = new Date();
+  const newMonth = calMonth + 1;
+  const newYear  = newMonth > 11 ? calYear + 1 : calYear;
+  const nm       = newMonth > 11 ? 0 : newMonth;
+  // 不能超過 2030
+  if (newYear > 2030) return;
+  calYear = newYear; calMonth = nm;
+  updateReturnTodayBar();
+  renderCalendar();
 });
-$('fab-today').addEventListener('click', () => { openEditorForDate(getTodayKey()); setActiveNav('nav-today'); });
 $('home-settings-btn').addEventListener('click', () => { showView('view-settings'); setActiveNav('nav-settings'); });
+
+function updateReturnTodayBar() {
+  const today = new Date();
+  const isCurrentMonth = (calYear === today.getFullYear() && calMonth === today.getMonth());
+  $('return-today-bar').style.display = isCurrentMonth ? 'none' : 'block';
+}
+
+$('return-today-btn').addEventListener('click', () => {
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  updateReturnTodayBar();
+  renderCalendar();
+});
+
+/* ============================================================
+   DETAIL VIEW (read-only)
+   ============================================================ */
+let detailDateKey = null;
+
+function openDetailForDate(dateKey) {
+  detailDateKey = dateKey;
+  const entry = allData.entries?.[dateKey] || null;
+  $('detail-title-label').textContent = formatDateZH(dateKey);
+
+  const container = $('detail-content');
+  container.innerHTML = '';
+
+  if (!entry || (!entry.text && !entry.photo && !entry.mood && !entry.weather)) {
+    const noEntry = document.createElement('div');
+    noEntry.className = 'detail-no-entry';
+    noEntry.innerHTML = `<div style="font-size:2rem;margin-bottom:.5rem;">📝</div>這天還沒有記錄<br><span style="font-size:.78rem;">點右上角 ✏️ 開始寫日記</span>`;
+    container.appendChild(noEntry);
+  } else {
+    // Photo
+    if (entry.photo) {
+      const img = document.createElement('img');
+      img.className = 'detail-photo';
+      img.src = entry.photo;
+      container.appendChild(img);
+    }
+
+    // Meta row: weather + mood
+    const metaRow = document.createElement('div');
+    metaRow.className = 'detail-meta-row';
+    if (entry.weather) {
+      const w = document.createElement('span');
+      w.className = 'detail-pill';
+      w.textContent = entry.weather;
+      metaRow.appendChild(w);
+    }
+    if (entry.mood) {
+      const m = document.createElement('span');
+      m.className = 'detail-pill';
+      m.textContent = entry.mood;
+      metaRow.appendChild(m);
+    }
+    if (metaRow.children.length) container.appendChild(metaRow);
+
+    // Diary text (five-year) 
+    const [y,mo,d] = dateKey.split('-');
+    YEARS.forEach(yr => {
+      const k2 = `${yr}-${mo}-${d}`;
+      const e2 = allData.entries?.[k2];
+      if (!e2?.text) return;
+      const block = document.createElement('div');
+      block.className = 'detail-year-block';
+      const isCur = yr === parseInt(y);
+      block.innerHTML = `<div style="font-size:.68rem;color:var(--latte);letter-spacing:.1em;margin-bottom:.35rem;">${yr} 年${e2.weather?' '+e2.weather:''}${e2.mood?' '+e2.mood:''}</div><div class="detail-text">${e2.text}</div>`;
+      if (isCur) block.style.border = '1.5px solid var(--warm-tan)';
+      container.appendChild(block);
+    });
+
+    // Gratitude
+    const gratList = [entry.gratitude1, entry.gratitude2, entry.gratitude3].filter(Boolean);
+    if (gratList.length) {
+      const gt = document.createElement('div');
+      gt.className = 'detail-section-title';
+      gt.textContent = '🌸 感恩日記';
+      container.appendChild(gt);
+      const gBox = document.createElement('div');
+      gBox.style.cssText = 'background:var(--parchment);border-radius:12px;padding:.6rem .9rem;';
+      gratList.forEach((g, i) => {
+        const item = document.createElement('div');
+        item.className = 'detail-gratitude-item';
+        item.innerHTML = `<span class="detail-gratitude-num">${i+1}.</span><span>${g}</span>`;
+        gBox.appendChild(item);
+      });
+      container.appendChild(gBox);
+    }
+
+    // Habits
+    const habits = allData.habits || [];
+    const checkedHabits = habits.filter(h => entry.habits?.[h]);
+    if (checkedHabits.length) {
+      const ht = document.createElement('div');
+      ht.className = 'detail-section-title';
+      ht.textContent = '✅ 習慣打卡';
+      container.appendChild(ht);
+      const hBox = document.createElement('div');
+      hBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:.4rem;';
+      checkedHabits.forEach(h => {
+        const chip = document.createElement('span');
+        chip.className = 'detail-pill';
+        chip.style.background = 'var(--espresso)';
+        chip.style.color = 'var(--cream)';
+        chip.style.border = 'none';
+        chip.textContent = '✓ ' + h;
+        hBox.appendChild(chip);
+      });
+      container.appendChild(hBox);
+    }
+
+    // Health
+    if (entry.healthTags?.length || entry.healthNote) {
+      const hlt = document.createElement('div');
+      hlt.className = 'detail-section-title';
+      hlt.textContent = '💊 健康狀況';
+      container.appendChild(hlt);
+      const hlBox = document.createElement('div');
+      hlBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem;';
+      (entry.healthTags || []).forEach(tag => {
+        const chip = document.createElement('span');
+        chip.className = 'detail-pill';
+        chip.style.background = 'var(--dusty-rose)';
+        chip.style.color = '#fff';
+        chip.style.border = 'none';
+        chip.textContent = tag;
+        hlBox.appendChild(chip);
+      });
+      container.appendChild(hlBox);
+      if (entry.healthNote) {
+        const hn = document.createElement('div');
+        hn.className = 'detail-text';
+        hn.textContent = entry.healthNote;
+        container.appendChild(hn);
+      }
+    }
+  }
+
+  showView('view-detail');
+  const detailScroll = document.querySelector('#view-detail > div[style*="overflow-y"]');
+  if (detailScroll) detailScroll.scrollTop = 0;
+}
+
+$('detail-back-btn').addEventListener('click', () => { showView('view-home'); setActiveNav('nav-home'); });
+$('detail-edit-btn').addEventListener('click', () => {
+  if (detailDateKey) openEditorForDate(detailDateKey);
+});
 
 /* ============================================================
    EDITOR
@@ -1287,11 +1596,19 @@ let editorDateKey = null;
 let editorEntry   = {};
 
 function openEditorForDate(dateKey) {
+  // 鎖定：只允許填 2026-2030 且不超過今天
+  const [y] = dateKey.split('-').map(Number);
+  const cellDate = new Date(dateKey);
+  const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+  if (y < 2026 || y > 2030 || cellDate > todayDate) {
+    showToast('此日期不在可記錄範圍內');
+    return;
+  }
+
   editorDateKey = dateKey;
   editorEntry = JSON.parse(JSON.stringify(allData.entries?.[dateKey] || {}));
 
   $('editor-date-display').textContent = formatDateZH(dateKey);
-  const [y] = dateKey.split('-').map(Number);
   $('editor-date-sub').textContent = YEARS.includes(y) ? '五年日記 · ' + y : '';
 
   document.querySelectorAll('#weather-row .weather-pill').forEach(b =>
@@ -1313,7 +1630,9 @@ function openEditorForDate(dateKey) {
 
   renderFiveYearSection(dateKey);
   renderEditorHabits();
-  $('gratitude-input').value = editorEntry.gratitude || '';
+  $('gratitude-input-1').value = editorEntry.gratitude1 || '';
+  $('gratitude-input-2').value = editorEntry.gratitude2 || '';
+  $('gratitude-input-3').value = editorEntry.gratitude3 || '';
   document.querySelectorAll('#health-tags .health-tag').forEach(t =>
     t.classList.toggle('selected', (editorEntry.healthTags||[]).includes(t.dataset.tag)));
   $('health-note').value = editorEntry.healthNote || '';
@@ -1375,7 +1694,8 @@ function renderFiveYearSection(dateKey) {
 function renderEditorHabits() {
   const list = $('habit-list');
   list.innerHTML = '';
-  const habits = allData.habits || [];
+  const [y, m] = editorDateKey.split('-').map(Number);
+  const habits = getHabitsForMonth(y, m - 1);
   const checked = editorEntry.habits || {};
   habits.forEach(h => {
     const row = document.createElement('div');
@@ -1417,11 +1737,7 @@ $('photo-input').addEventListener('change', e => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    editorEntry.photo = ev.target.result;
-    $('photo-preview').src = ev.target.result;
-    $('photo-preview').style.display = 'block';
-    $('photo-placeholder').style.display = 'none';
-    $('photo-del-btn').classList.remove('hidden');
+    openCropModal(ev.target.result);
   };
   reader.readAsDataURL(file);
   e.target.value = '';
@@ -1434,6 +1750,142 @@ $('photo-del-btn').addEventListener('click', e => {
   $('photo-placeholder').style.display = 'flex';
   $('photo-del-btn').classList.add('hidden');
 });
+
+/* ============================================================
+   PHOTO CROP
+   ============================================================ */
+let cropState = { scale: 1, x: 0, y: 0, startX: 0, startY: 0, dragging: false, imgW: 0, imgH: 0, contW: 0, contH: 0, pinchDist: 0 };
+let cropSrcData = null;
+
+function openCropModal(dataUrl) {
+  cropSrcData = dataUrl;
+  const img = $('crop-img');
+  const cont = $('crop-container');
+  img.src = dataUrl;
+  img.onload = () => {
+    cropState.imgW = img.naturalWidth;
+    cropState.imgH = img.naturalHeight;
+    cropState.contW = cont.offsetWidth;
+    cropState.contH = cont.offsetHeight;
+    // Initial scale: cover the container
+    const scaleW = cropState.contW / cropState.imgW;
+    const scaleH = cropState.contH / cropState.imgH;
+    cropState.scale = Math.max(scaleW, scaleH);
+    cropState.x = (cropState.contW - cropState.imgW * cropState.scale) / 2;
+    cropState.y = (cropState.contH - cropState.imgH * cropState.scale) / 2;
+    applyCropTransform();
+  };
+  $('crop-modal').classList.add('open');
+}
+
+function applyCropTransform() {
+  $('crop-img').style.transform = `translate(${cropState.x}px, ${cropState.y}px) scale(${cropState.scale})`;
+}
+
+function clampCrop() {
+  const s = cropState;
+  const scaledW = s.imgW * s.scale;
+  const scaledH = s.imgH * s.scale;
+  // Prevent showing white on right/bottom
+  if (s.x > 0) s.x = 0;
+  if (s.y > 0) s.y = 0;
+  if (s.x + scaledW < s.contW) s.x = s.contW - scaledW;
+  if (s.y + scaledH < s.contH) s.y = s.contH - scaledH;
+}
+
+// Touch events
+const cont = $('crop-container');
+cont.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    cropState.dragging = true;
+    cropState.startX = e.touches[0].clientX - cropState.x;
+    cropState.startY = e.touches[0].clientY - cropState.y;
+  } else if (e.touches.length === 2) {
+    cropState.pinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+  e.preventDefault();
+}, { passive: false });
+
+cont.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && cropState.dragging) {
+    cropState.x = e.touches[0].clientX - cropState.startX;
+    cropState.y = e.touches[0].clientY - cropState.startY;
+    clampCrop();
+    applyCropTransform();
+  } else if (e.touches.length === 2) {
+    const newDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const ratio = newDist / cropState.pinchDist;
+    const minScale = Math.max(cropState.contW / cropState.imgW, cropState.contH / cropState.imgH);
+    cropState.scale = Math.max(minScale, Math.min(cropState.scale * ratio, 5));
+    cropState.pinchDist = newDist;
+    clampCrop();
+    applyCropTransform();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+cont.addEventListener('touchend', () => { cropState.dragging = false; });
+
+// Mouse events (desktop)
+cont.addEventListener('mousedown', e => {
+  cropState.dragging = true;
+  cropState.startX = e.clientX - cropState.x;
+  cropState.startY = e.clientY - cropState.y;
+  $('crop-img').style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', e => {
+  if (!cropState.dragging) return;
+  cropState.x = e.clientX - cropState.startX;
+  cropState.y = e.clientY - cropState.startY;
+  clampCrop();
+  applyCropTransform();
+});
+window.addEventListener('mouseup', () => {
+  cropState.dragging = false;
+  $('crop-img').style.cursor = 'grab';
+});
+cont.addEventListener('wheel', e => {
+  const minScale = Math.max(cropState.contW / cropState.imgW, cropState.contH / cropState.imgH);
+  cropState.scale = Math.max(minScale, Math.min(cropState.scale * (e.deltaY > 0 ? 0.92 : 1.08), 5));
+  clampCrop();
+  applyCropTransform();
+  e.preventDefault();
+}, { passive: false });
+
+$('crop-cancel-btn').addEventListener('click', () => {
+  $('crop-modal').classList.remove('open');
+});
+
+$('crop-confirm-btn').addEventListener('click', () => {
+  const s = cropState;
+  const canvas = document.createElement('canvas');
+  // Output 800x600 (4:3)
+  canvas.width = 800; canvas.height = 600;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    // Calculate what portion of the image is visible in the container
+    const srcX = (-s.x) / s.scale;
+    const srcY = (-s.y) / s.scale;
+    const srcW = s.contW / s.scale;
+    const srcH = s.contH / s.scale;
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 800, 600);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    editorEntry.photo = dataUrl;
+    $('photo-preview').src = dataUrl;
+    $('photo-preview').style.display = 'block';
+    $('photo-placeholder').style.display = 'none';
+    $('photo-del-btn').classList.remove('hidden');
+    $('crop-modal').classList.remove('open');
+  };
+  img.src = cropSrcData;
+});
 document.querySelectorAll('#health-tags .health-tag').forEach(t => {
   t.addEventListener('click', () => {
     if (!editorEntry.healthTags) editorEntry.healthTags = [];
@@ -1445,23 +1897,44 @@ document.querySelectorAll('#health-tags .health-tag').forEach(t => {
   });
 });
 $('health-note').addEventListener('input', () => { editorEntry.healthNote = $('health-note').value; });
-$('gratitude-input').addEventListener('input', () => { editorEntry.gratitude = $('gratitude-input').value; });
+$('gratitude-input-1').addEventListener('input', () => { editorEntry.gratitude1 = $('gratitude-input-1').value; });
+$('gratitude-input-2').addEventListener('input', () => { editorEntry.gratitude2 = $('gratitude-input-2').value; });
+$('gratitude-input-3').addEventListener('input', () => { editorEntry.gratitude3 = $('gratitude-input-3').value; });
 
 $('save-btn').addEventListener('click', async () => {
+  // 必填驗證：天氣、心情、日記內容
+  if (!editorEntry.weather) { showToast('請選擇今天的天氣 ☀️'); return; }
+  if (!editorEntry.mood)    { showToast('請選擇今天的心情 😊'); return; }
+  const currentYearText = (() => {
+    const [y] = editorDateKey.split('-');
+    // 找到目前年份的文字區域
+    const section = $('five-year-section');
+    const ta = section?.querySelector('textarea');
+    return ta?.value?.trim() || editorEntry.text || '';
+  })();
+  if (!currentYearText) { showToast('請寫下今天的日記內容 📝'); return; }
+
+  editorEntry.text = currentYearText;
+  editorEntry.gratitude1 = $('gratitude-input-1').value;
+  editorEntry.gratitude2 = $('gratitude-input-2').value;
+  editorEntry.gratitude3 = $('gratitude-input-3').value;
   editorEntry.updatedAt = Date.now();
+
   const btn = $('save-btn');
   btn.textContent = '儲存中…'; btn.disabled = true;
-  // 1. Save local immediately
+
+  // 1. 立即存本機
   if (!allData.entries) allData.entries = {};
   allData.entries[editorDateKey] = editorEntry;
   saveLocalData();
-  // 2. Jump back right away – don't wait for cloud
+
+  // 2. 立刻跳回（不等雲端）
   showView('view-home'); setActiveNav('nav-home');
-  showToast('儲存中，請稍候…');
   btn.textContent = '💾 儲存回憶'; btn.disabled = false;
-  // 3. Cloud sync in background
-  await saveToFirestore();
   showToast('已儲存 ✓');
+
+  // 3. 背景雲端同步
+  saveToFirestore().catch(e => console.warn('Firestore sync failed', e));
 });
 
 $('editor-back-btn').addEventListener('click', () => { showView('view-home'); setActiveNav('nav-home'); });
@@ -1569,7 +2042,12 @@ $('import-json-file').addEventListener('change', async e => {
    PDF EXPORT（用 Canvas 轉圖 → PNG / 高解析度）
    ============================================================ */
 function renderExport() {
-  const selIds = ['pdf-month-sel','pdf-diary-month-sel','pdf-health-month-sel'];
+  // 同步年份選取器到 calYear
+  const yearSel = $('export-year-sel');
+  yearSel.value = String(calYear);
+  yearSel.addEventListener('change', () => { calYear = parseInt(yearSel.value); });
+
+  const selIds = ['pdf-month-sel','pdf-diary-month-sel','pdf-health-month-sel','pdf-mood-month-sel'];
   selIds.forEach(sid => {
     const container = $(sid);
     container.innerHTML = '';
@@ -1634,93 +2112,84 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 }
 
 /* ──────────────────────────────────────────────
-   1. 月回顧照片牆 → PNG（300dpi 品質）
+   1. 月回顧照片牆 → PNG（正方形格、無 emoji、修復標題）
    ────────────────────────────────────────────── */
 $('pdf-monthly-btn').addEventListener('click', async () => {
   const month = getSelectedMonth('pdf-month-sel');
-  const year  = calYear;
+  const year  = parseInt($('export-year-sel').value) || calYear;
   const btn   = $('pdf-monthly-btn');
   btn.textContent = '製作中…'; btn.disabled = true;
 
-  // A4 landscape @ 150dpi = 1754 x 1240px
-  const W = 1754, H = 1240;
+  const cols = 7;
+  const rows = 6;
+  const cellSize = 200; // 正方形
+  const gap = 6;
+  const marginX = 40;
+  const titleH = 90;   // 標題區高度，確保不蓋到格子
+  const weekdayH = 36;
+  const W = marginX*2 + cols*cellSize + gap*(cols-1);
+  const H = titleH + weekdayH + rows*cellSize + gap*(rows-1) + 40;
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Background
   ctx.fillStyle = '#F5EFE6';
   ctx.fillRect(0, 0, W, H);
 
-  // Title
+  // Title（在格子上方，不重疊）
   ctx.fillStyle = '#3D2B1A';
-  ctx.font = 'bold 60px serif';
+  ctx.font = 'bold 52px serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${year} 年 ${month+1} 月　月回顧`, W/2, 72);
-
-  // Grid
-  const cols = 7;
-  const rows = 6;
-  const marginX = 40, marginY = 100, gap = 8;
-  const cellW = Math.floor((W - marginX*2 - gap*(cols-1)) / cols);
-  const cellH = Math.floor((H - marginY - 40 - gap*(rows-1)) / rows);
+  ctx.fillText(`${year} 年 ${month+1} 月　月回顧`, W/2, 62);
 
   // Weekday headers
   const dayNames = ['日','一','二','三','四','五','六'];
-  ctx.font = 'bold 22px sans-serif';
+  ctx.font = 'bold 20px sans-serif';
   ctx.fillStyle = '#A08060';
   ctx.textAlign = 'center';
   dayNames.forEach((w, i) => {
-    const x = marginX + i*(cellW+gap) + cellW/2;
-    ctx.fillText(w, x, marginY - 12);
+    const x = marginX + i*(cellSize+gap) + cellSize/2;
+    ctx.fillText(w, x, titleH + 24);
   });
 
   const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month+1, 0).getDate();
+  const gridStartY  = titleH + weekdayH;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const pos = firstDay + d - 1;
     const col = pos % cols;
     const row = Math.floor(pos / cols);
-    const x = marginX + col*(cellW+gap);
-    const y = marginY + row*(cellH+gap);
+    const x = marginX + col*(cellSize+gap);
+    const y = gridStartY + row*(cellSize+gap);
 
-    // Cell bg
     ctx.fillStyle = '#EDE3D3';
-    roundRect(ctx, x, y, cellW, cellH, 8);
+    roundRect(ctx, x, y, cellSize, cellSize, 8);
 
     const key   = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry = allData.entries?.[key];
 
-    // Photo
     if (entry?.photo) {
       const img = await loadImg(entry.photo);
       if (img) {
         ctx.save();
-        roundRectClip(ctx, x, y, cellW, cellH, 8);
-        // Cover fit
-        const scale = Math.max(cellW/img.width, cellH/img.height);
+        roundRectClip(ctx, x, y, cellSize, cellSize, 8);
+        // 正方形 cover fit
+        const scale = Math.max(cellSize/img.width, cellSize/img.height);
         const sw = img.width*scale, sh = img.height*scale;
-        ctx.drawImage(img, x+(cellW-sw)/2, y+(cellH-sh)/2, sw, sh);
+        ctx.drawImage(img, x+(cellSize-sw)/2, y+(cellSize-sh)/2, sw, sh);
         ctx.restore();
-        // Darken overlay for date readability
-        ctx.fillStyle = 'rgba(0,0,0,0.28)';
-        roundRect(ctx, x, y, cellW, cellH, 8);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        roundRect(ctx, x, y, cellSize, cellSize, 8);
       }
     }
 
-    // Date number
+    // Date number only（不顯示心情 emoji）
     ctx.fillStyle = entry?.photo ? '#fff' : '#7A5C40';
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(String(d), x+8, y+24);
-
-    // Mood emoji
-    if (entry?.mood) {
-      ctx.font = '22px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(entry.mood, x+cellW-6, y+cellH-8);
-    }
   }
 
   downloadCanvas(canvas, `五年日記-月回顧-${year}-${month+1}.png`);
@@ -1751,11 +2220,11 @@ function roundRectClip(ctx, x, y, w, h, r) {
 }
 
 /* ──────────────────────────────────────────────
-   2. 日記本 → PNG（每頁一張，打包下載）
+   2. 日記本 → PNG（雙欄：左方形照片 + 右日記內容）
    ────────────────────────────────────────────── */
 $('pdf-diary-btn').addEventListener('click', async () => {
   const month = getSelectedMonth('pdf-diary-month-sel');
-  const year  = calYear;
+  const year  = parseInt($('export-year-sel').value) || calYear;
   const btn   = $('pdf-diary-btn');
   btn.textContent = '製作中…'; btn.disabled = true;
 
@@ -1778,92 +2247,118 @@ $('pdf-diary-btn').addEventListener('click', async () => {
 
     // Decorative top band
     ctx.fillStyle = '#EDE3D3';
-    ctx.fillRect(0, 0, W, 100);
+    ctx.fillRect(0, 0, W, 90);
 
-    // Date
+    // Date header
     ctx.fillStyle = '#3D2B1A';
-    ctx.font = 'bold 48px serif';
+    ctx.font = 'bold 44px serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`${year}.${String(month+1).padStart(2,'0')}.${String(d).padStart(2,'0')}`, 60, 68);
+    ctx.fillText(`${year}.${String(month+1).padStart(2,'0')}.${String(d).padStart(2,'0')}`, 60, 62);
 
-    // Weather & mood right
-    ctx.font = '40px sans-serif';
-    ctx.textAlign = 'right';
-    let rightX = W - 60;
-    if (entry.mood)    { ctx.fillText(entry.mood, rightX, 68); rightX -= 60; }
-    if (entry.weather) { ctx.fillText(entry.weather, rightX, 68); }
+    // ── 雙欄佈局 ──
+    const colPad = 60;
+    const colGap = 40;
+    const colTop = 110;
+    const leftW  = 480; // 正方形照片寬度
+    const rightX = colPad + leftW + colGap;
+    const rightW = W - rightX - colPad;
 
-    let curY = 130;
-
-    // Photo (4:3 aspect, full width minus margins)
+    // 左欄：正方形照片
     if (entry.photo) {
       const img = await loadImg(entry.photo);
       if (img) {
-        const photoW = W - 120;
-        const photoH = Math.round(photoW * 3/4);
         ctx.save();
-        roundRectClip(ctx, 60, curY, photoW, photoH, 14);
-        const scale = Math.max(photoW/img.width, photoH/img.height);
+        roundRectClip(ctx, colPad, colTop, leftW, leftW, 14);
+        const scale = Math.max(leftW/img.width, leftW/img.height);
         const sw = img.width*scale, sh = img.height*scale;
-        ctx.drawImage(img, 60+(photoW-sw)/2, curY+(photoH-sh)/2, sw, sh);
+        ctx.drawImage(img, colPad+(leftW-sw)/2, colTop+(leftW-sh)/2, sw, sh);
         ctx.restore();
-        curY += photoH + 40;
       }
+    } else {
+      ctx.fillStyle = '#EDE3D3';
+      roundRect(ctx, colPad, colTop, leftW, leftW, 14);
+      ctx.fillStyle = '#C4A87A';
+      ctx.font = '60px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📷', colPad + leftW/2, colTop + leftW/2 + 20);
     }
 
-    // Divider
-    ctx.strokeStyle = '#D4BC9E';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(60, curY); ctx.lineTo(W-60, curY); ctx.stroke();
-    curY += 30;
+    // 照片下方：心情 + 天氣（左欄）
+    let metaY = colTop + leftW + 24;
+    ctx.textAlign = 'center';
+    ctx.font = '36px sans-serif';
+    let metaStr = [entry.weather, entry.mood].filter(Boolean).join('  ');
+    if (metaStr) ctx.fillText(metaStr, colPad + leftW/2, metaY);
 
-    // Five-year diary entries
-    YEARS.forEach(yr => {
-      const k2    = `${yr}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const e2    = allData.entries?.[k2];
-      const isCur = yr === year;
+    // 右欄：日記內容
+    let curY = colTop;
 
-      // Year tag
-      ctx.fillStyle = isCur ? '#7A5C40' : '#EDE3D3';
-      roundRect(ctx, 60, curY, 80, 34, 6);
-      ctx.fillStyle = isCur ? '#fff' : '#A08060';
-      ctx.font = `bold 22px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(String(yr), 100, curY+23);
+    // Five-year entries（只顯示當年）
+    if (entry.text) {
+      ctx.fillStyle = '#7A5C40';
+      ctx.font = 'bold 22px sans-serif';
       ctx.textAlign = 'left';
+      ctx.fillText(`${year} 年日記`, rightX, curY + 26);
+      ctx.fillStyle = '#EDE3D3';
+      ctx.fillRect(rightX, curY + 34, rightW, 2);
+      curY += 50;
 
-      if (e2?.text) {
-        ctx.fillStyle = isCur ? '#3D2B1A' : '#7A5C40';
-        ctx.font = isCur ? '26px serif' : '24px serif';
-        const nextY = wrapText(ctx, e2.text, 160, curY+24, W-220, 36);
-        curY = Math.max(curY+50, nextY) + 8;
-      } else {
-        ctx.fillStyle = '#C4A87A';
-        ctx.font = '22px serif';
-        ctx.fillText(yr > new Date().getFullYear() ? '未來的這一天…' : '（無記錄）', 160, curY+24);
-        curY += 50;
-      }
-
-      // Thin separator
-      ctx.strokeStyle = '#EDE3D3'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(60, curY); ctx.lineTo(W-60, curY); ctx.stroke();
+      ctx.fillStyle = '#3D2B1A';
+      ctx.font = '26px serif';
+      ctx.textAlign = 'left';
+      curY = wrapText(ctx, entry.text, rightX, curY, rightW, 38);
       curY += 20;
+    }
 
-      if (curY > H - 100) return; // overflow guard
+    // 其他年份對比
+    const [, mo, dy] = key.split('-');
+    YEARS.forEach(yr => {
+      if (yr === year) return;
+      const k2 = `${yr}-${mo}-${dy}`;
+      const e2 = allData.entries?.[k2];
+      if (!e2?.text) return;
+      if (curY > H - 120) return;
+      ctx.fillStyle = '#A08060';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${yr} 年`, rightX, curY + 20);
+      ctx.fillStyle = '#EDE3D3';
+      ctx.fillRect(rightX, curY + 26, rightW, 1);
+      curY += 36;
+      ctx.fillStyle = '#7A5C40';
+      ctx.font = '22px serif';
+      curY = wrapText(ctx, e2.text, rightX, curY, rightW, 34);
+      curY += 12;
     });
+
+    // 感恩日記
+    const gratList = [entry.gratitude1, entry.gratitude2, entry.gratitude3].filter(Boolean);
+    if (gratList.length && curY < H - 140) {
+      curY += 16;
+      ctx.fillStyle = '#C9A99A';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('🌸 感恩日記', rightX, curY);
+      curY += 30;
+      gratList.forEach((g, i) => {
+        ctx.fillStyle = '#7A5C40';
+        ctx.font = '22px sans-serif';
+        ctx.fillText(`${i+1}. ${g}`, rightX, curY);
+        curY += 34;
+      });
+    }
 
     // Footer
     ctx.fillStyle = '#B89B7A';
     ctx.font = '22px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('五年日記 2026–2030', W/2, H-40);
+    ctx.fillText('五年日記 2026–2030', W/2, H-36);
 
     pages.push({ canvas, label: `${month+1}月${d}日` });
   }
 
   if (!pages.length) { showToast('本月無日記記錄'); btn.textContent='下載日記 PNG'; btn.disabled=false; return; }
 
-  // Download each page
   pages.forEach(({ canvas, label }) => {
     downloadCanvas(canvas, `五年日記-${year}-${month+1}-${label}.png`);
   });
@@ -1873,11 +2368,109 @@ $('pdf-diary-btn').addEventListener('click', async () => {
 });
 
 /* ──────────────────────────────────────────────
+   2.5 Mood Tracker 心情追蹤表 → PNG
+   ────────────────────────────────────────────── */
+$('pdf-mood-btn').addEventListener('click', async () => {
+  const month = getSelectedMonth('pdf-mood-month-sel');
+  const year  = parseInt($('export-year-sel').value) || calYear;
+  const btn   = $('pdf-mood-btn');
+  btn.textContent = '製作中…'; btn.disabled = true;
+
+  const moodColors = { '😆':'#F4A261', '☺️':'#E9C46A', '😶':'#A8DADC', '😢':'#74B3CE', '😡':'#E07A5F' };
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const cellSize = 110;
+  const gap = 6;
+  const cols = 7;
+  const rows = Math.ceil((new Date(year, month, 1).getDay() + daysInMonth) / cols);
+  const marginX = 50;
+  const titleH  = 90;
+  const weekdayH = 36;
+  const W = marginX*2 + cols*(cellSize+gap) - gap;
+  const H = titleH + weekdayH + rows*(cellSize+gap) - gap + 60;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#F5EFE6';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#3D2B1A';
+  ctx.font = 'bold 48px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${year} 年 ${month+1} 月　心情追蹤`, W/2, 60);
+
+  // Legend
+  let lx = marginX;
+  Object.entries(moodColors).forEach(([emoji, color]) => {
+    ctx.fillStyle = color;
+    roundRect(ctx, lx, 70, 22, 22, 4);
+    ctx.fillStyle = '#7A5C40';
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(emoji, lx + 26, 88);
+    lx += 70;
+  });
+
+  // Weekday headers
+  const dayNames = ['日','一','二','三','四','五','六'];
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = '#A08060';
+  ctx.textAlign = 'center';
+  dayNames.forEach((w, i) => {
+    ctx.fillText(w, marginX + i*(cellSize+gap) + cellSize/2, titleH + 24);
+  });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const gridStartY = titleH + weekdayH;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const pos = firstDay + d - 1;
+    const col = pos % cols;
+    const row = Math.floor(pos / cols);
+    const x = marginX + col*(cellSize+gap);
+    const y = gridStartY + row*(cellSize+gap);
+
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = allData.entries?.[key];
+    const mood = entry?.mood;
+    const bgColor = moodColors[mood] || '#EDE3D3';
+
+    ctx.fillStyle = bgColor;
+    roundRect(ctx, x, y, cellSize, cellSize, 10);
+
+    // Date number
+    ctx.fillStyle = mood ? '#fff' : '#A08060';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(d), x + cellSize/2, y + 34);
+
+    // Mood emoji
+    if (mood) {
+      ctx.font = '32px sans-serif';
+      ctx.fillText(mood, x + cellSize/2, y + cellSize - 16);
+    }
+  }
+
+  // Footer
+  ctx.fillStyle = '#B89B7A';
+  ctx.font = '20px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('五年日記 2026–2030', W/2, H - 20);
+
+  downloadCanvas(canvas, `五年日記-心情追蹤-${year}-${month+1}.png`);
+  btn.textContent = '下載心情追蹤 PNG'; btn.disabled = false;
+  showToast('心情追蹤已下載 ✓');
+});
+
+/* ──────────────────────────────────────────────
    3. 習慣達成率表 → PNG
    ────────────────────────────────────────────── */
 $('pdf-habit-btn').addEventListener('click', () => {
   const habits = allData.habits || [];
   const btn    = $('pdf-habit-btn');
+  const year   = parseInt($('export-year-sel').value) || calYear;
   if (!habits.length) { showToast('尚未設定習慣'); return; }
 
   const W = 1754, H = Math.max(900, 200 + habits.length * 70);
@@ -1891,7 +2484,7 @@ $('pdf-habit-btn').addEventListener('click', () => {
   ctx.fillStyle = '#3D2B1A';
   ctx.font = 'bold 52px serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${calYear} 習慣達成率`, W/2, 64);
+  ctx.fillText(`${year} 習慣達成率`, W/2, 64);
 
   const marginL = 200, marginR = 60;
   const startY  = 110;
@@ -1945,7 +2538,7 @@ $('pdf-habit-btn').addEventListener('click', () => {
     });
   });
 
-  downloadCanvas(canvas, `五年日記-習慣統計-${calYear}.png`);
+  downloadCanvas(canvas, `五年日記-習慣統計-${year}.png`);
   showToast('習慣統計已下載 ✓');
 });
 
@@ -1954,7 +2547,7 @@ $('pdf-habit-btn').addEventListener('click', () => {
    ────────────────────────────────────────────── */
 $('pdf-health-btn').addEventListener('click', () => {
   const month = getSelectedMonth('pdf-health-month-sel');
-  const year  = calYear;
+  const year  = parseInt($('export-year-sel').value) || calYear;
   const btn   = $('pdf-health-btn');
 
   const daysInMonth = new Date(year, month+1, 0).getDate();

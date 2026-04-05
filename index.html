@@ -419,6 +419,8 @@ body::before {
   padding: .8rem 1rem;
 }
 .collapse-section.open .collapse-body { display: block; }
+/* 感恩日記的 collapse-body 展開時用 flex */
+#collapse-gratitude.open .collapse-body { display: flex; }
 
 /* Habit tracker */
 .habit-list { display: flex; flex-direction: column; gap: .4rem; }
@@ -714,7 +716,7 @@ body::before {
   min-width: 16px; padding-top: .15rem;
 }
 /* Crop modal */
-#crop-container { height: 60vw; max-height: 340px; }
+#crop-container { height: 80vw; max-height: 360px; aspect-ratio: 1/1; }
 .gratitude-input { border-radius: 10px; }
 .gratitude-input:focus { border-color: var(--espresso) !important; outline: none; }
 
@@ -774,7 +776,6 @@ input[type="file"] { display: none; }
       <div class="topbar-sub">2026 · 2027 · 2028 · 2029 · 2030</div>
     </div>
     <div style="display:flex;gap:.5rem;">
-      <button class="icon-btn" id="home-settings-btn" title="設定">⚙️</button>
     </div>
   </div>
 
@@ -784,10 +785,9 @@ input[type="file"] { display: none; }
         <button class="month-nav-arrow" id="prev-month-btn">‹</button>
         <div class="month-label" id="month-label">2026 年 1 月</div>
         <button class="month-nav-arrow" id="next-month-btn">›</button>
+        <button id="return-today-btn" style="display:none;background:none;border:none;font-size:.7rem;color:var(--latte);cursor:pointer;padding:.2rem .4rem;border-radius:6px;letter-spacing:.04em;white-space:nowrap;line-height:1.2;">今日↩</button>
       </div>
-      <div id="return-today-bar" style="display:none;text-align:center;margin-bottom:.4rem;">
-        <button id="return-today-btn" style="background:var(--parchment);border:1.5px solid var(--warm-tan);color:var(--espresso);font-family:var(--font-body);font-size:.78rem;padding:.3rem .9rem;border-radius:20px;cursor:pointer;letter-spacing:.06em;">↩ 返回今日</button>
-      </div>
+      <div id="return-today-bar" style="display:none;"></div>
       <div class="cal-weekdays">
         <div class="cal-weekday">日</div><div class="cal-weekday">一</div>
         <div class="cal-weekday">二</div><div class="cal-weekday">三</div>
@@ -921,10 +921,10 @@ input[type="file"] { display: none; }
 <div class="collapse-section" id="collapse-gratitude">
   <div class="collapse-header" onclick="toggleCollapse('collapse-gratitude')">
     <span class="collapse-icon">🌸</span>
-    <span class="collapse-title">感恩日記 <span style="font-size:.7rem;color:var(--text-light);">（最多 3 件）</span></span>
+    <span class="collapse-title">感恩日記</span>
     <span class="collapse-arrow">▾</span>
   </div>
-  <div class="collapse-body" style="display:flex;flex-direction:column;gap:.5rem;">
+  <div class="collapse-body" style="flex-direction:column;gap:.5rem;">
     <textarea class="gratitude-input" id="gratitude-input-1" placeholder="今天讓我感恩的第 1 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
     <textarea class="gratitude-input" id="gratitude-input-2" placeholder="今天讓我感恩的第 2 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
     <textarea class="gratitude-input" id="gratitude-input-3" placeholder="今天讓我感恩的第 3 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
@@ -1492,12 +1492,11 @@ $('next-month-btn').addEventListener('click', () => {
   updateReturnTodayBar();
   renderCalendar();
 });
-$('home-settings-btn').addEventListener('click', () => { showView('view-settings'); setActiveNav('nav-settings'); });
 
 function updateReturnTodayBar() {
   const today = new Date();
   const isCurrentMonth = (calYear === today.getFullYear() && calMonth === today.getMonth());
-  $('return-today-bar').style.display = isCurrentMonth ? 'none' : 'block';
+  $('return-today-btn').style.display = isCurrentMonth ? 'none' : 'inline-block';
 }
 
 $('return-today-btn').addEventListener('click', () => {
@@ -1921,8 +1920,8 @@ $('crop-cancel-btn').addEventListener('click', () => {
 $('crop-confirm-btn').addEventListener('click', () => {
   const s = cropState;
   const canvas = document.createElement('canvas');
-  // Output 800x600 (4:3)
-  canvas.width = 800; canvas.height = 600;
+  // Output 800x800 (1:1 正方形)
+  canvas.width = 800; canvas.height = 800;
   const ctx = canvas.getContext('2d');
   const img = new Image();
   img.onload = () => {

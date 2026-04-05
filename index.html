@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -8,7 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 
 <!-- Firebase compat SDK -->
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <!-- jsPDF for PDF export -->
@@ -307,7 +310,7 @@ body::before {
 /* Photo upload */
 .photo-area {
   margin: 0 1.2rem .8rem;
-  aspect-ratio: 4/3;
+  aspect-ratio: 1/1;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--parchment);
@@ -721,12 +724,14 @@ body::before {
 .text-center { text-align: center; }
 input[type="file"] { display: none; }
 </style>
+
 </head>
 <body>
 
 <!-- ══════════════════════════════════════════════
      LOADING
 ══════════════════════════════════════════════ -->
+
 <div class="view active" id="view-loading">
   <div>
     <div class="loading-title">五年日記</div>
@@ -737,26 +742,31 @@ input[type="file"] { display: none; }
 <!-- ══════════════════════════════════════════════
      SYNC ID SETUP
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-setup">
   <div class="setup-card">
     <div class="setup-logo">五年日記</div>
     <div class="setup-years">2026 · 2027 · 2028 · 2029 · 2030</div>
 
-    <label class="setup-label">自訂同步 ID</label>
-    <input class="setup-input" id="setup-id-input"
-           placeholder="例：yuyi2026" maxlength="30"
-           autocapitalize="none" autocorrect="off" spellcheck="false">
-    <div class="setup-hint">⚠️ 此 ID 為你的資料鑰匙，請妥善記錄。不區分大小寫。</div>
-    <button class="btn-primary" id="setup-start-btn">開始使用 →</button>
+```
+<label class="setup-label">自訂同步 ID</label>
+<input class="setup-input" id="setup-id-input"
+       placeholder="例：yuyi2026" maxlength="30"
+       autocapitalize="none" autocorrect="off" spellcheck="false">
+<div class="setup-hint">⚠️ 此 ID 為你的資料鑰匙，請妥善記錄。不區分大小寫。</div>
+<button class="btn-primary" id="setup-start-btn">開始使用 →</button>
 
-    <div class="setup-divider"><span>或</span></div>
-    <button class="btn-secondary" id="setup-random-btn">🎲 自動生成隨機 ID</button>
+<div class="setup-divider"><span>或</span></div>
+<button class="btn-secondary" id="setup-random-btn">🎲 自動生成隨機 ID</button>
+```
+
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
      HOME – Monthly Calendar
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-home">
   <div class="topbar">
     <div>
@@ -786,18 +796,33 @@ input[type="file"] { display: none; }
       </div>
     </div>
 
-    <div class="cal-grid" id="cal-grid"></div>
+```
+<div class="cal-grid" id="cal-grid"></div>
 
-    <div class="habit-summary" id="habit-summary">
-      <div class="habit-summary-title">本月習慣達成率</div>
-      <div id="habit-bars"></div>
+<div class="habit-summary" id="habit-summary">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
+    <div class="habit-summary-title" style="margin-bottom:0;">本月習慣</div>
+    <button id="home-habit-toggle-btn" style="background:none;border:none;font-size:.75rem;color:var(--text-sub);cursor:pointer;letter-spacing:.04em;padding:.15rem .4rem;border-radius:6px;border:1px solid var(--border);">＋ 管理</button>
+  </div>
+  <div id="habit-bars"></div>
+  <!-- 習慣管理面板（預設收合） -->
+  <div id="home-habit-manager" style="display:none;margin-top:.8rem;border-top:1px solid var(--border);padding-top:.8rem;">
+    <div class="habit-manager-list" id="home-habit-manager-list"></div>
+    <div class="habit-add-row" style="border-top:1px solid var(--border);margin-top:.3rem;">
+      <input class="habit-add-input" id="home-habit-add-input" placeholder="新增本月習慣…" maxlength="30">
+      <button class="habit-add-btn" id="home-habit-add-btn">＋</button>
     </div>
+  </div>
+</div>
+```
+
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
      DETAIL VIEW (read-only)
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-detail">
   <div class="topbar">
     <button class="icon-btn" id="detail-back-btn">←</button>
@@ -812,6 +837,7 @@ input[type="file"] { display: none; }
 <!-- ══════════════════════════════════════════════
      CROP MODAL
 ══════════════════════════════════════════════ -->
+
 <div class="modal-overlay" id="crop-modal">
   <div class="modal-sheet" style="max-height:92vh;">
     <div class="modal-handle"></div>
@@ -829,6 +855,7 @@ input[type="file"] { display: none; }
 <!-- ══════════════════════════════════════════════
      EDITOR
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-editor">
   <div class="topbar">
     <button class="icon-btn" id="editor-back-btn">←</button>
@@ -845,87 +872,91 @@ input[type="file"] { display: none; }
       </div>
     </div>
 
-    <!-- Weather -->
-    <div class="weather-row" id="weather-row">
-      <button class="weather-pill" data-weather="☀️">☀️ 晴</button>
-      <button class="weather-pill" data-weather="⛅">⛅ 多雲</button>
-      <button class="weather-pill" data-weather="🌧️">🌧️ 雨</button>
-      <button class="weather-pill" data-weather="⛈️">⛈️ 雷雨</button>
-      <button class="weather-pill" data-weather="🌫️">🌫️ 霧</button>
-    </div>
+```
+<!-- Weather -->
+<div class="weather-row" id="weather-row">
+  <button class="weather-pill" data-weather="☀️">☀️ 晴</button>
+  <button class="weather-pill" data-weather="⛅">⛅ 多雲</button>
+  <button class="weather-pill" data-weather="🌧️">🌧️ 雨</button>
+  <button class="weather-pill" data-weather="⛈️">⛈️ 雷雨</button>
+  <button class="weather-pill" data-weather="🌫️">🌫️ 霧</button>
+</div>
 
-    <!-- Photo -->
-    <div class="photo-area" id="photo-area">
-      <div class="photo-placeholder" id="photo-placeholder">
-        <span style="font-size:1.8rem;line-height:1;display:block;">📷</span>
-        <span style="font-size:.78rem;">點擊上傳照片</span>
-      </div>
-      <img id="photo-preview" src="" alt="" style="display:none;">
-      <button class="photo-del-btn hidden" id="photo-del-btn">✕</button>
-    </div>
-    <input type="file" id="photo-input" accept="image/*">
+<!-- Photo -->
+<div class="photo-area" id="photo-area">
+  <div class="photo-placeholder" id="photo-placeholder">
+    <span style="font-size:1.8rem;line-height:1;display:block;">📷</span>
+    <span style="font-size:.78rem;">點擊上傳照片</span>
+  </div>
+  <img id="photo-preview" src="" alt="" style="display:none;">
+  <button class="photo-del-btn hidden" id="photo-del-btn">✕</button>
+</div>
+<input type="file" id="photo-input" accept="image/*">
 
-    <!-- Mood -->
-    <div class="mood-row" id="mood-row">
-      <button class="mood-btn" data-mood="😆">😆</button>
-      <button class="mood-btn" data-mood="☺️">☺️</button>
-      <button class="mood-btn" data-mood="😶">😶</button>
-      <button class="mood-btn" data-mood="😢">😢</button>
-      <button class="mood-btn" data-mood="😡">😡</button>
-    </div>
+<!-- Mood -->
+<div class="mood-row" id="mood-row">
+  <button class="mood-btn" data-mood="😆">😆</button>
+  <button class="mood-btn" data-mood="☺️">☺️</button>
+  <button class="mood-btn" data-mood="😶">😶</button>
+  <button class="mood-btn" data-mood="😢">😢</button>
+  <button class="mood-btn" data-mood="😡">😡</button>
+</div>
 
-    <!-- Five-year entries -->
-    <div class="five-year-section" id="five-year-section"></div>
+<!-- Five-year entries -->
+<div class="five-year-section" id="five-year-section"></div>
 
-    <!-- Habit tracker (collapsible) -->
-    <div class="collapse-section" id="collapse-habit">
-      <div class="collapse-header" onclick="toggleCollapse('collapse-habit')">
-        <span class="collapse-icon">✅</span>
-        <span class="collapse-title">習慣打卡</span>
-        <span class="collapse-arrow">▾</span>
-      </div>
-      <div class="collapse-body">
-        <div class="habit-list" id="habit-list"></div>
-      </div>
-    </div>
+<!-- Habit tracker (collapsible) -->
+<div class="collapse-section" id="collapse-habit">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-habit')">
+    <span class="collapse-icon">✅</span>
+    <span class="collapse-title">習慣打卡</span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body">
+    <div class="habit-list" id="habit-list"></div>
+  </div>
+</div>
 
-    <!-- Gratitude (collapsible) -->
-    <div class="collapse-section" id="collapse-gratitude">
-      <div class="collapse-header" onclick="toggleCollapse('collapse-gratitude')">
-        <span class="collapse-icon">🌸</span>
-        <span class="collapse-title">感恩日記 <span style="font-size:.7rem;color:var(--text-light);">（最多 3 件）</span></span>
-        <span class="collapse-arrow">▾</span>
-      </div>
-      <div class="collapse-body" style="display:flex;flex-direction:column;gap:.5rem;">
-        <textarea class="gratitude-input" id="gratitude-input-1" placeholder="今天讓我感恩的第 1 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
-        <textarea class="gratitude-input" id="gratitude-input-2" placeholder="今天讓我感恩的第 2 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
-        <textarea class="gratitude-input" id="gratitude-input-3" placeholder="今天讓我感恩的第 3 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
-      </div>
-    </div>
+<!-- Gratitude (collapsible) -->
+<div class="collapse-section" id="collapse-gratitude">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-gratitude')">
+    <span class="collapse-icon">🌸</span>
+    <span class="collapse-title">感恩日記 <span style="font-size:.7rem;color:var(--text-light);">（最多 3 件）</span></span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body" style="display:flex;flex-direction:column;gap:.5rem;">
+    <textarea class="gratitude-input" id="gratitude-input-1" placeholder="今天讓我感恩的第 1 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
+    <textarea class="gratitude-input" id="gratitude-input-2" placeholder="今天讓我感恩的第 2 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
+    <textarea class="gratitude-input" id="gratitude-input-3" placeholder="今天讓我感恩的第 3 件事…" rows="2" style="resize:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .7rem;background:var(--parchment);"></textarea>
+  </div>
+</div>
 
-    <!-- Health (collapsible) -->
-    <div class="collapse-section" id="collapse-health">
-      <div class="collapse-header" onclick="toggleCollapse('collapse-health')">
-        <span class="collapse-icon">💊</span>
-        <span class="collapse-title">健康狀況</span>
-        <span class="collapse-arrow">▾</span>
-      </div>
-      <div class="collapse-body">
-        <div class="health-tags" id="health-tags">
-          <button class="health-tag" data-tag="頭痛">頭痛</button>
-          <button class="health-tag" data-tag="經痛">經痛</button>
-          <button class="health-tag" data-tag="過敏">過敏</button>
-          <button class="health-tag" data-tag="感冒">感冒</button>
-          <button class="health-tag" data-tag="胃痛">胃痛</button>
-          <button class="health-tag" data-tag="其他">其他</button>
-        </div>
-        <textarea class="health-note" id="health-note"
-                  placeholder="詳細症狀或備注…" rows="3"></textarea>
-      </div>
+<!-- Health (collapsible) -->
+<div class="collapse-section" id="collapse-health">
+  <div class="collapse-header" onclick="toggleCollapse('collapse-health')">
+    <span class="collapse-icon">💊</span>
+    <span class="collapse-title">健康狀況</span>
+    <span class="collapse-arrow">▾</span>
+  </div>
+  <div class="collapse-body">
+    <div class="health-tags" id="health-tags">
+      <button class="health-tag" data-tag="頭痛">頭痛</button>
+      <button class="health-tag" data-tag="經痛">經痛</button>
+      <button class="health-tag" data-tag="過敏">過敏</button>
+      <button class="health-tag" data-tag="感冒">感冒</button>
+      <button class="health-tag" data-tag="胃痛">胃痛</button>
+      <button class="health-tag" data-tag="其他">其他</button>
     </div>
+    <textarea class="health-note" id="health-note"
+              placeholder="詳細症狀或備注…" rows="3"></textarea>
+  </div>
+</div>
+```
+
   </div>
 
   <!-- Save bar -->
+
   <div class="save-bar">
     <button class="btn-save" id="save-btn">💾 儲存回憶</button>
   </div>
@@ -934,6 +965,7 @@ input[type="file"] { display: none; }
 <!-- ══════════════════════════════════════════════
      SETTINGS
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-settings">
   <div class="topbar">
     <button class="icon-btn" id="settings-back-btn">←</button>
@@ -962,49 +994,52 @@ input[type="file"] { display: none; }
       </div>
     </div>
 
-    <!-- Habits -->
-    <div class="settings-section">
-      <div class="settings-section-title">習慣清單</div>
-      <div class="settings-card">
-        <div class="habit-manager-list" id="habit-manager-list"></div>
-        <div class="habit-add-row">
-          <input class="habit-add-input" id="habit-add-input" placeholder="新增習慣…" maxlength="30">
-          <button class="habit-add-btn" id="habit-add-btn">＋ 新增</button>
-        </div>
-      </div>
+```
+<!-- Habits -->
+<div class="settings-section">
+  <div class="settings-section-title">習慣清單</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <div class="settings-row-icon">📋</div>
+      <div class="settings-row-label" style="font-size:.82rem;color:var(--text-light);line-height:1.5;">習慣項目現在在「首頁」以月份為單位管理，每月可獨立設定。</div>
     </div>
+  </div>
+</div>
 
-    <!-- Data -->
-    <div class="settings-section">
-      <div class="settings-section-title">資料管理</div>
-      <div class="settings-card">
-        <div class="settings-row" id="export-json-row">
-          <div class="settings-row-icon">📤</div>
-          <div class="settings-row-label">匯出完整存檔 (JSON)</div>
-          <button class="settings-row-btn" id="export-json-btn">匯出</button>
-        </div>
-        <div class="settings-row" id="import-json-row">
-          <div class="settings-row-icon">📥</div>
-          <div class="settings-row-label">匯入舊存檔 (JSON)</div>
-          <button class="settings-row-btn" id="import-json-btn">匯入</button>
-        </div>
-        <div class="settings-row" id="export-pdf-row" style="cursor:pointer;" onclick="showView('view-export')">
-          <div class="settings-row-icon">📄</div>
-          <div class="settings-row-label">匯出圖檔（PNG）</div>
-          <div class="settings-row-value">›</div>
-        </div>
-      </div>
+<!-- Data -->
+<div class="settings-section">
+  <div class="settings-section-title">資料管理</div>
+  <div class="settings-card">
+    <div class="settings-row" id="export-json-row">
+      <div class="settings-row-icon">📤</div>
+      <div class="settings-row-label">匯出完整存檔 (JSON)</div>
+      <button class="settings-row-btn" id="export-json-btn">匯出</button>
     </div>
+    <div class="settings-row" id="import-json-row">
+      <div class="settings-row-icon">📥</div>
+      <div class="settings-row-label">匯入舊存檔 (JSON)</div>
+      <button class="settings-row-btn" id="import-json-btn">匯入</button>
+    </div>
+    <div class="settings-row" id="export-pdf-row" style="cursor:pointer;" onclick="showView('view-export')">
+      <div class="settings-row-icon">📄</div>
+      <div class="settings-row-label">匯出圖檔（PNG）</div>
+      <div class="settings-row-value">›</div>
+    </div>
+  </div>
+</div>
 
-    <div style="text-align:center;color:var(--text-light);font-size:.72rem;margin-top:1rem;">
-      五年日記 2026–2030 · v1.1
-    </div>
+<div style="text-align:center;color:var(--text-light);font-size:.72rem;margin-top:1rem;">
+  五年日記 2026–2030 · v1.1
+</div>
+```
+
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
      EXPORT PDF
 ══════════════════════════════════════════════ -->
+
 <div class="view" id="view-export">
   <div class="topbar">
     <button class="icon-btn" id="export-back-btn">←</button>
@@ -1027,50 +1062,55 @@ input[type="file"] { display: none; }
       </div>
     </div>
 
-    <div class="export-card" id="pdf-monthly-card">
-      <div class="export-card-icon">🗓️</div>
-      <div class="export-card-title">月回顧照片牆</div>
-      <div class="export-card-desc">31 天網格，每格顯示照片縮圖（正方形格）。無照片日期僅顯示日期數字。</div>
-      <div class="export-month-row" id="pdf-month-sel"></div>
-      <button class="btn-primary" style="margin-top:1rem;" id="pdf-monthly-btn">下載月回顧 PNG</button>
-    </div>
+```
+<div class="export-card" id="pdf-monthly-card">
+  <div class="export-card-icon">🗓️</div>
+  <div class="export-card-title">月回顧照片牆</div>
+  <div class="export-card-desc">31 天網格，每格顯示照片縮圖（正方形格）。無照片日期僅顯示日期數字。</div>
+  <div class="export-month-row" id="pdf-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-monthly-btn">下載月回顧 PNG</button>
+</div>
 
-    <div class="export-card" id="pdf-diary-card">
-      <div class="export-card-icon">📖</div>
-      <div class="export-card-title">日記本匯出</div>
-      <div class="export-card-desc">雙欄排版：左邊正方形照片，右邊日記內容與感恩日記。心情與天氣置於照片下方。</div>
-      <div class="export-month-row" id="pdf-diary-month-sel"></div>
-      <button class="btn-primary" style="margin-top:1rem;" id="pdf-diary-btn">下載日記 PNG</button>
-    </div>
+<div class="export-card" id="pdf-diary-card">
+  <div class="export-card-icon">📖</div>
+  <div class="export-card-title">日記本匯出</div>
+  <div class="export-card-desc">雙欄排版：左邊正方形照片，右邊日記內容與感恩日記。心情與天氣置於照片下方。</div>
+  <div class="export-month-row" id="pdf-diary-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-diary-btn">下載日記 PNG</button>
+</div>
 
-    <div class="export-card" id="pdf-mood-card">
-      <div class="export-card-icon">💭</div>
-      <div class="export-card-title">Mood Tracker 心情追蹤表</div>
-      <div class="export-card-desc">以月份為單位，每日心情以色塊標記，一眼看出整月情緒變化。</div>
-      <div class="export-month-row" id="pdf-mood-month-sel"></div>
-      <button class="btn-primary" style="margin-top:1rem;" id="pdf-mood-btn">下載心情追蹤 PNG</button>
-    </div>
+<div class="export-card" id="pdf-mood-card">
+  <div class="export-card-icon">💭</div>
+  <div class="export-card-title">Mood Tracker 心情追蹤表</div>
+  <div class="export-card-desc">以月份為單位，每日心情以色塊標記，一眼看出整月情緒變化。</div>
+  <div class="export-month-row" id="pdf-mood-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-mood-btn">下載心情追蹤 PNG</button>
+</div>
 
-    <div class="export-card" id="pdf-habit-card">
-      <div class="export-card-icon">📊</div>
-      <div class="export-card-title">習慣達成率表</div>
-      <div class="export-card-desc">統計全年習慣打卡達成率，視覺化呈現。</div>
-      <button class="btn-primary" style="margin-top:1rem;" id="pdf-habit-btn">下載習慣統計 PNG</button>
-    </div>
+<div class="export-card" id="pdf-habit-card">
+  <div class="export-card-icon">📊</div>
+  <div class="export-card-title">習慣打卡表</div>
+  <div class="export-card-desc">以月為單位，橫軸為日期，有打卡的格子顯示 ✔。</div>
+  <div class="export-month-row" id="pdf-habit-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-habit-btn">下載習慣打卡 PNG</button>
+</div>
 
-    <div class="export-card" id="pdf-health-card">
-      <div class="export-card-icon">🏥</div>
-      <div class="export-card-title">健康紀錄表</div>
-      <div class="export-card-desc">過濾身體狀況紀錄，方便就醫參考。</div>
-      <div class="export-month-row" id="pdf-health-month-sel"></div>
-      <button class="btn-primary" style="margin-top:1rem;" id="pdf-health-btn">下載健康紀錄 PNG</button>
-    </div>
+<div class="export-card" id="pdf-health-card">
+  <div class="export-card-icon">🏥</div>
+  <div class="export-card-title">健康紀錄表</div>
+  <div class="export-card-desc">過濾身體狀況紀錄，方便就醫參考。</div>
+  <div class="export-month-row" id="pdf-health-month-sel"></div>
+  <button class="btn-primary" style="margin-top:1rem;" id="pdf-health-btn">下載健康紀錄 PNG</button>
+</div>
+```
+
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
      BOTTOM NAV (shared for home/settings/export)
 ══════════════════════════════════════════════ -->
+
 <nav class="bottom-nav" id="bottom-nav" style="display:none;">
   <button class="nav-item active" id="nav-home" onclick="showView('view-home');setActiveNav('nav-home')">
     <span class="nav-icon">🗓️</span>
@@ -1091,14 +1131,17 @@ input[type="file"] { display: none; }
 </nav>
 
 <!-- Hidden file input for JSON import -->
+
 <input type="file" id="import-json-file" accept=".json" style="display:none;">
 
 <!-- Toast -->
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════════ -->
+
 <script>
 /* ============================================================
    Firebase config
@@ -1261,28 +1304,32 @@ async function saveEntry(dateKey, entry) {
   await saveToFirestore();  // then sync to cloud (no photo)
 }
 
-async function saveHabits(habits) {
-  // 習慣綁定到「當月」，key 格式 habitsYYYY-MM
-  const monthKey = `habits${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+async function saveHabitsForMonth(year, month, habits) {
+  const monthKey = `habits${year}-${String(month+1).padStart(2,'0')}`;
   if (!allData.habitsByMonth) allData.habitsByMonth = {};
   allData.habitsByMonth[monthKey] = habits;
-  allData.habits = habits; // 仍保留全域 habits 作為當月快取
+  // 同步更新全域快取（當月）
+  if (year === calYear && month === calMonth) allData.habits = habits;
   saveLocalData();
   await saveToFirestore();
 }
 
+// 保留 saveHabits 相容舊呼叫（settings 頁已移除，但留著安全）
+async function saveHabits(habits) {
+  await saveHabitsForMonth(calYear, calMonth, habits);
+}
+
 function getHabitsForMonth(year, month) {
-  // 優先取當月習慣，找不到則 fallback 到最近一個有設定的月份
   if (allData.habitsByMonth) {
     const key = `habits${year}-${String(month+1).padStart(2,'0')}`;
-    if (allData.habitsByMonth[key]) return allData.habitsByMonth[key];
-    // Fallback: 找最近的前月設定
+    if (allData.habitsByMonth[key]) return [...allData.habitsByMonth[key]];
+    // Fallback: 找同年最近的前月設定
     for (let m = month - 1; m >= 0; m--) {
       const k2 = `habits${year}-${String(m+1).padStart(2,'0')}`;
-      if (allData.habitsByMonth[k2]) return allData.habitsByMonth[k2];
+      if (allData.habitsByMonth[k2]) return [...allData.habitsByMonth[k2]];
     }
   }
-  return allData.habits || [];
+  return [...(allData.habits || [])];
 }
 
 /* ============================================================
@@ -1354,9 +1401,9 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry = allData.entries?.[key];
-    const cellDate = new Date(calYear, calMonth, d);
-    // 鎖定：只能點選過去到今天（2026–2030 範圍）
-    const isFuture = cellDate > todayDate;
+    // 用本地時間比對，避免時區問題讓今天被判成未來
+    const cellDate  = new Date(calYear, calMonth, d);
+    const isFuture  = cellDate > todayDate;
     const outOfRange = calYear < 2026 || calYear > 2030;
     const cell = document.createElement('div');
     const hasPhoto = !!entry?.photo;
@@ -1397,8 +1444,15 @@ function renderCalendar() {
 function renderHabitSummary() {
   const bars = $('habit-bars');
   bars.innerHTML = '';
+  // 切換月份時關閉管理面板
+  $('home-habit-manager').style.display = 'none';
+  $('home-habit-toggle-btn').textContent = '＋ 管理';
+
   const habits = getHabitsForMonth(calYear, calMonth);
-  if (!habits.length) return;
+  if (!habits.length) {
+    bars.innerHTML = `<div style="font-size:.75rem;color:var(--text-light);text-align:center;padding:.5rem 0;">尚未設定本月習慣，點「管理」新增</div>`;
+    return;
+  }
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
   habits.forEach(h => {
     let count = 0;
@@ -1597,9 +1651,11 @@ let editorEntry   = {};
 
 function openEditorForDate(dateKey) {
   // 鎖定：只允許填 2026-2030 且不超過今天
-  const [y] = dateKey.split('-').map(Number);
-  const cellDate = new Date(dateKey);
-  const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+  const [y, mo, dy] = dateKey.split('-').map(Number);
+  // 用本地時間比對，避免 UTC 偏移造成今天被判定為未來
+  const cellDate  = new Date(y, mo - 1, dy);
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
   if (y < 2026 || y > 2030 || cellDate > todayDate) {
     showToast('此日期不在可記錄範圍內');
     return;
@@ -1940,16 +1996,20 @@ $('save-btn').addEventListener('click', async () => {
 $('editor-back-btn').addEventListener('click', () => { showView('view-home'); setActiveNav('nav-home'); });
 
 /* ============================================================
-   SETTINGS
+   HOME HABIT MANAGER（月份綁定）
    ============================================================ */
-function renderSettings() {
-  $('sync-id-display').textContent = syncId || '—';
-  renderHabitManager();
-}
-function renderHabitManager() {
-  const list = $('habit-manager-list');
+$('home-habit-toggle-btn').addEventListener('click', () => {
+  const panel = $('home-habit-manager');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  $('home-habit-toggle-btn').textContent = isOpen ? '＋ 管理' : '✕ 關閉';
+  if (!isOpen) renderHomeHabitManager();
+});
+
+function renderHomeHabitManager() {
+  const list = $('home-habit-manager-list');
   list.innerHTML = '';
-  const habits = allData.habits || [];
+  const habits = getHabitsForMonth(calYear, calMonth);
   habits.forEach((h, i) => {
     const row = document.createElement('div');
     row.className = 'habit-manager-row';
@@ -1957,43 +2017,51 @@ function renderHabitManager() {
     input.className = 'habit-manager-name';
     input.value = h;
     input.placeholder = '點擊編輯名稱';
-    // 聚焦時顯示底線提示
-    input.addEventListener('focus', () => { row.classList.add('editing'); });
+    input.addEventListener('focus', () => row.classList.add('editing'));
     input.addEventListener('blur', async () => {
       row.classList.remove('editing');
       const newVal = input.value.trim();
       if (!newVal) { input.value = h; return; }
       if (newVal === h) return;
       habits[i] = newVal;
-      await saveHabits([...habits]);
-      showToast('已更新習慣名稱 ✓');
+      await saveHabitsForMonth(calYear, calMonth, [...habits]);
+      showToast('已更新 ✓');
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
     const del = document.createElement('button');
     del.className = 'habit-del-btn';
     del.textContent = '×';
-    del.title = '移除';
     del.addEventListener('click', async () => {
-      habits.splice(i,1);
-      await saveHabits([...habits]);
-      renderHabitManager();
-      showToast('已移除習慣');
+      habits.splice(i, 1);
+      await saveHabitsForMonth(calYear, calMonth, [...habits]);
+      renderHomeHabitManager();
+      renderHabitSummary();
+      showToast('已移除');
     });
     row.appendChild(input); row.appendChild(del);
     list.appendChild(row);
   });
 }
-$('habit-add-btn').addEventListener('click', async () => {
-  const val = $('habit-add-input').value.trim();
+
+$('home-habit-add-btn').addEventListener('click', async () => {
+  const val = $('home-habit-add-input').value.trim();
   if (!val) return;
-  const habits = allData.habits || [];
+  const habits = getHabitsForMonth(calYear, calMonth);
   habits.push(val);
-  await saveHabits(habits);
-  $('habit-add-input').value = '';
-  renderHabitManager();
-  showToast('已新增習慣');
+  await saveHabitsForMonth(calYear, calMonth, habits);
+  $('home-habit-add-input').value = '';
+  renderHomeHabitManager();
+  renderHabitSummary();
+  showToast('已新增 ✓');
 });
-$('habit-add-input').addEventListener('keydown', e => { if (e.key==='Enter') $('habit-add-btn').click(); });
+$('home-habit-add-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('home-habit-add-btn').click(); });
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings() {
+  $('sync-id-display').textContent = syncId || '—';
+}
 $('copy-sync-id-btn').addEventListener('click', () => {
   navigator.clipboard?.writeText(syncId).then(() => showToast('已複製 ID ✓'));
 });
@@ -2047,7 +2115,7 @@ function renderExport() {
   yearSel.value = String(calYear);
   yearSel.addEventListener('change', () => { calYear = parseInt(yearSel.value); });
 
-  const selIds = ['pdf-month-sel','pdf-diary-month-sel','pdf-health-month-sel','pdf-mood-month-sel'];
+  const selIds = ['pdf-month-sel','pdf-diary-month-sel','pdf-health-month-sel','pdf-mood-month-sel','pdf-habit-month-sel'];
   selIds.forEach(sid => {
     const container = $(sid);
     container.innerHTML = '';
@@ -2368,7 +2436,7 @@ $('pdf-diary-btn').addEventListener('click', async () => {
 });
 
 /* ──────────────────────────────────────────────
-   2.5 Mood Tracker 心情追蹤表 → PNG
+   2.5 Mood Tracker 心情追蹤表 → PNG（橫軸＝天，縱軸＝心情）
    ────────────────────────────────────────────── */
 $('pdf-mood-btn').addEventListener('click', async () => {
   const month = getSelectedMonth('pdf-mood-month-sel');
@@ -2376,86 +2444,106 @@ $('pdf-mood-btn').addEventListener('click', async () => {
   const btn   = $('pdf-mood-btn');
   btn.textContent = '製作中…'; btn.disabled = true;
 
+  const moodList   = ['😆','☺️','😶','😢','😡'];
+  const moodLabels = ['開心','滿足','普通','難過','生氣'];
   const moodColors = { '😆':'#F4A261', '☺️':'#E9C46A', '😶':'#A8DADC', '😢':'#74B3CE', '😡':'#E07A5F' };
   const daysInMonth = new Date(year, month+1, 0).getDate();
 
-  const cellSize = 110;
-  const gap = 6;
-  const cols = 7;
-  const rows = Math.ceil((new Date(year, month, 1).getDay() + daysInMonth) / cols);
-  const marginX = 50;
-  const titleH  = 90;
-  const weekdayH = 36;
-  const W = marginX*2 + cols*(cellSize+gap) - gap;
-  const H = titleH + weekdayH + rows*(cellSize+gap) - gap + 60;
+  // 表格尺寸
+  const marginL  = 120;  // 左側標籤欄
+  const marginR  = 40;
+  const titleH   = 80;
+  const headerH  = 44;   // 日期 header 列高度
+  const rowH     = 64;   // 每個心情一列
+  const cellW    = Math.floor((1754 - marginL - marginR) / 31); // 以 31 天為基準平分
+  const W        = marginL + cellW * 31 + marginR;
+  const H        = titleH + headerH + moodList.length * rowH + 60;
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
+  // 背景
   ctx.fillStyle = '#F5EFE6';
   ctx.fillRect(0, 0, W, H);
 
+  // 標題
   ctx.fillStyle = '#3D2B1A';
   ctx.font = 'bold 48px serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${year} 年 ${month+1} 月　心情追蹤`, W/2, 60);
+  ctx.fillText(`${year} 年 ${month+1} 月　心情追蹤表`, W/2, 56);
 
-  // Legend
-  let lx = marginX;
-  Object.entries(moodColors).forEach(([emoji, color]) => {
-    ctx.fillStyle = color;
-    roundRect(ctx, lx, 70, 22, 22, 4);
-    ctx.fillStyle = '#7A5C40';
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(emoji, lx + 26, 88);
-    lx += 70;
-  });
+  // 日期 header（1~daysInMonth）
+  for (let d = 1; d <= 31; d++) {
+    const cx = marginL + (d-1) * cellW;
+    const isValid = d <= daysInMonth;
 
-  // Weekday headers
-  const dayNames = ['日','一','二','三','四','五','六'];
-  ctx.font = 'bold 18px sans-serif';
-  ctx.fillStyle = '#A08060';
-  ctx.textAlign = 'center';
-  dayNames.forEach((w, i) => {
-    ctx.fillText(w, marginX + i*(cellSize+gap) + cellSize/2, titleH + 24);
-  });
+    // 背景格
+    ctx.fillStyle = isValid ? '#EDE3D3' : '#F0EBE3';
+    roundRect(ctx, cx + 2, titleH + 2, cellW - 4, headerH - 4, 4);
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const gridStartY = titleH + weekdayH;
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const pos = firstDay + d - 1;
-    const col = pos % cols;
-    const row = Math.floor(pos / cols);
-    const x = marginX + col*(cellSize+gap);
-    const y = gridStartY + row*(cellSize+gap);
-
-    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const entry = allData.entries?.[key];
-    const mood = entry?.mood;
-    const bgColor = moodColors[mood] || '#EDE3D3';
-
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, x, y, cellSize, cellSize, 10);
-
-    // Date number
-    ctx.fillStyle = mood ? '#fff' : '#A08060';
-    ctx.font = 'bold 22px sans-serif';
+    ctx.fillStyle = isValid ? '#7A5C40' : '#C4B09A';
+    ctx.font = `bold ${d <= 9 ? 22 : 20}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(String(d), x + cellSize/2, y + 34);
+    ctx.fillText(String(d), cx + cellW/2, titleH + headerH*0.68);
+  }
 
-    // Mood emoji
-    if (mood) {
-      ctx.font = '32px sans-serif';
-      ctx.fillText(mood, x + cellSize/2, y + cellSize - 16);
+  // 心情行
+  moodList.forEach((mood, mi) => {
+    const rowY = titleH + headerH + mi * rowH;
+
+    // 左側標籤
+    ctx.fillStyle = '#7A5C40';
+    ctx.font = '26px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(mood + ' ' + moodLabels[mi], marginL - 10, rowY + rowH * 0.62);
+
+    for (let d = 1; d <= 31; d++) {
+      const cx = marginL + (d-1) * cellW;
+      const isValid = d <= daysInMonth;
+
+      if (!isValid) {
+        ctx.fillStyle = '#F0EBE3';
+        roundRect(ctx, cx + 2, rowY + 2, cellW - 4, rowH - 4, 4);
+        continue;
+      }
+
+      const key   = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const entry = allData.entries?.[key];
+      const isChecked = entry?.mood === mood;
+
+      ctx.fillStyle = isChecked ? moodColors[mood] : '#EDE3D3';
+      roundRect(ctx, cx + 2, rowY + 2, cellW - 4, rowH - 4, 4);
+
+      if (isChecked) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✔', cx + cellW/2, rowY + rowH * 0.66);
+      }
     }
+  });
+
+  // 橫線分隔
+  for (let mi = 0; mi <= moodList.length; mi++) {
+    const ly = titleH + headerH + mi * rowH;
+    ctx.strokeStyle = '#D4BC9E'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(marginL, ly); ctx.lineTo(W - marginR, ly);
+    ctx.stroke();
+  }
+  // 縱線分隔
+  for (let d = 0; d <= 31; d++) {
+    const lx = marginL + d * cellW;
+    ctx.strokeStyle = '#D4BC9E'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lx, titleH); ctx.lineTo(lx, titleH + headerH + moodList.length * rowH);
+    ctx.stroke();
   }
 
   // Footer
   ctx.fillStyle = '#B89B7A';
-  ctx.font = '20px sans-serif';
+  ctx.font = '22px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('五年日記 2026–2030', W/2, H - 20);
 
@@ -2465,81 +2553,114 @@ $('pdf-mood-btn').addEventListener('click', async () => {
 });
 
 /* ──────────────────────────────────────────────
-   3. 習慣達成率表 → PNG
+   3. 習慣打卡表 → PNG（橫軸＝天，縱軸＝習慣，打勾顯示）
    ────────────────────────────────────────────── */
 $('pdf-habit-btn').addEventListener('click', () => {
-  const habits = allData.habits || [];
-  const btn    = $('pdf-habit-btn');
+  const month  = getSelectedMonth('pdf-habit-month-sel');
   const year   = parseInt($('export-year-sel').value) || calYear;
-  if (!habits.length) { showToast('尚未設定習慣'); return; }
+  const btn    = $('pdf-habit-btn');
+  // 讀取該月份的習慣設定
+  const habits = getHabitsForMonth(year, month);
+  if (!habits.length) { showToast('本月尚未設定習慣'); return; }
 
-  const W = 1754, H = Math.max(900, 200 + habits.length * 70);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const marginL  = 160;
+  const marginR  = 40;
+  const titleH   = 80;
+  const headerH  = 44;
+  const rowH     = 60;
+  const cellW    = Math.floor((1754 - marginL - marginR) / 31);
+  const W        = marginL + cellW * 31 + marginR;
+  const H        = titleH + headerH + habits.length * rowH + 60;
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
+  // 背景
   ctx.fillStyle = '#F5EFE6';
   ctx.fillRect(0, 0, W, H);
 
+  // 標題
   ctx.fillStyle = '#3D2B1A';
-  ctx.font = 'bold 52px serif';
+  ctx.font = 'bold 48px serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${year} 習慣達成率`, W/2, 64);
+  ctx.fillText(`${year} 年 ${month+1} 月　習慣打卡表`, W/2, 56);
 
-  const marginL = 200, marginR = 60;
-  const startY  = 110;
-  const colW    = (W - marginL - marginR) / 12;
-  const rowH    = 58;
-
-  // Month headers
-  MONTHS_ZH.forEach((m, i) => {
-    ctx.fillStyle = '#A08060';
-    ctx.font = 'bold 22px sans-serif';
+  // 日期 header（1~31）
+  for (let d = 1; d <= 31; d++) {
+    const cx = marginL + (d-1) * cellW;
+    const isValid = d <= daysInMonth;
+    ctx.fillStyle = isValid ? '#EDE3D3' : '#F0EBE3';
+    roundRect(ctx, cx + 2, titleH + 2, cellW - 4, headerH - 4, 4);
+    ctx.fillStyle = isValid ? '#7A5C40' : '#C4B09A';
+    ctx.font = `${d <= 9 ? 22 : 20}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(m, marginL + i*colW + colW/2, startY + 28);
-  });
+    ctx.fillText(String(d), cx + cellW/2, titleH + headerH * 0.68);
+  }
 
-  // Grid
+  // 習慣行
   habits.forEach((h, hi) => {
-    const y = startY + 50 + hi * rowH;
+    const rowY = titleH + headerH + hi * rowH;
+    const isEven = hi % 2 === 0;
 
-    // Habit name
+    // 左側習慣名稱
     ctx.fillStyle = '#3D2B1A';
-    ctx.font = '26px sans-serif';
+    ctx.font = '24px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(h, marginL - 12, y + rowH*0.62);
+    ctx.fillText(h, marginL - 10, rowY + rowH * 0.62);
 
-    MONTHS_ZH.forEach((_, mi) => {
-      const daysInM = new Date(calYear, mi+1, 0).getDate();
-      let cnt = 0;
-      for (let d = 1; d <= daysInM; d++) {
-        const key = `${calYear}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        if (allData.entries?.[key]?.habits?.[h]) cnt++;
+    for (let d = 1; d <= 31; d++) {
+      const cx = marginL + (d-1) * cellW;
+      const isValid = d <= daysInMonth;
+
+      if (!isValid) {
+        ctx.fillStyle = '#F0EBE3';
+        roundRect(ctx, cx + 2, rowY + 2, cellW - 4, rowH - 4, 4);
+        continue;
       }
-      const pct = cnt / daysInM;
-      const cx = marginL + mi*colW + 4;
-      const cw = colW - 8;
-      const ch = rowH - 10;
 
-      // BG cell
-      ctx.fillStyle = '#EDE3D3';
-      roundRect(ctx, cx, y, cw, ch, 6);
+      const key       = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const entry     = allData.entries?.[key];
+      const isChecked = !!(entry?.habits?.[h]);
 
-      // Fill bar
-      if (pct > 0) {
-        const alpha = 0.3 + pct * 0.7;
-        ctx.fillStyle = `rgba(122,92,64,${alpha})`;
-        roundRect(ctx, cx, y, cw, ch, 6);
-        ctx.fillStyle = pct > 0.5 ? '#fff' : '#7A5C40';
-        ctx.font = `bold 18px sans-serif`;
+      ctx.fillStyle = isChecked ? '#B89B7A' : (isEven ? '#F5EFE6' : '#EDE3D3');
+      roundRect(ctx, cx + 2, rowY + 2, cellW - 4, rowH - 4, 4);
+
+      if (isChecked) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 26px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${Math.round(pct*100)}%`, cx+cw/2, y+ch*0.65);
+        ctx.fillText('✔', cx + cellW/2, rowY + rowH * 0.66);
       }
-    });
+    }
   });
 
-  downloadCanvas(canvas, `五年日記-習慣統計-${year}.png`);
-  showToast('習慣統計已下載 ✓');
+  // 格線
+  for (let hi = 0; hi <= habits.length; hi++) {
+    const ly = titleH + headerH + hi * rowH;
+    ctx.strokeStyle = '#D4BC9E'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(marginL, ly); ctx.lineTo(W - marginR, ly);
+    ctx.stroke();
+  }
+  for (let d = 0; d <= 31; d++) {
+    const lx = marginL + d * cellW;
+    ctx.strokeStyle = '#D4BC9E'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lx, titleH); ctx.lineTo(lx, titleH + headerH + habits.length * rowH);
+    ctx.stroke();
+  }
+
+  // Footer
+  ctx.fillStyle = '#B89B7A';
+  ctx.font = '22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('五年日記 2026–2030', W/2, H - 20);
+
+  downloadCanvas(canvas, `五年日記-習慣打卡-${year}-${month+1}.png`);
+  showToast('習慣打卡已下載 ✓');
 });
 
 /* ──────────────────────────────────────────────
@@ -2641,5 +2762,6 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(init, 600);
 });
 </script>
+
 </body>
 </html>
